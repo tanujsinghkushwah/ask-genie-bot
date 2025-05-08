@@ -434,6 +434,7 @@ class GenieTweetBot:
         Keep it under 240 characters and make it engaging without using hashtags.
         
         Don't use phrases like "As an AI" or anything that reveals you're an AI.
+        Do not use asterisks for emphasis (like *word* or *phrase*) in your response.
         """
         
         response = self.generate_ai_response(prompt, conversation_id=str(tweet.id))
@@ -475,6 +476,7 @@ class GenieTweetBot:
             
             Don't use phrases like "As an AI" or anything that reveals you're an AI.
             Make it sound natural like a human tech expert's tweet.
+            Do not use asterisks for emphasis (like *word* or *phrase*) in your response.
             """
             
             response = self.generate_ai_response(prompt, conversation_id=str(mention.id))
@@ -525,6 +527,7 @@ class GenieTweetBot:
         - Be under 240 characters
         - NOT use hashtags
         - NOT mention that you're an AI or bot
+        - NOT use asterisks for emphasis (like *word* or *phrase*)
         
         Write it like a real human tech expert would write it - casual, direct, and with personality.
         """
