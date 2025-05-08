@@ -7,13 +7,7 @@ import io
 from datetime import datetime
 import requests
 import firebase_admin
-from firebase_admin import credentials
-try:
-    from firebase_admin import remote_config
-    REMOTE_CONFIG_AVAILABLE = True
-except ImportError:
-    print("Warning: Firebase remote_config module not available, using fallback configuration")
-    REMOTE_CONFIG_AVAILABLE = False
+from firebase_admin import credentials, remote_config
 import asyncio # Required for template.load()
 import tweepy
 import google.generativeai as genai
@@ -40,17 +34,8 @@ def initialize_firebase_and_load_config():
     try:
         firebase_admin.get_app()
     except ValueError:
-        try:
-            cred = credentials.Certificate('serviceAccountKey.json')
-            firebase_admin.initialize_app(cred)
-            print("Firebase app initialized successfully")
-        except Exception as e:
-            print(f"Error initializing Firebase app: {e}")
-            return None
-    
-    if not REMOTE_CONFIG_AVAILABLE:
-        print("Using fallback configuration as remote_config is not available")
-        return None
+        cred = credentials.Certificate('serviceAccountKey.json')
+        firebase_admin.initialize_app(cred)
     
     print("Initializing Remote Config server template...")
     # Initialize with ultimate fallbacks. Remote values will override these.
@@ -70,12 +55,6 @@ def initialize_firebase_and_load_config():
 
 def get_config_value(evaluated_config, key, default_value=""):
     """Gets a config value from the evaluated Remote Config object."""
-    if not REMOTE_CONFIG_AVAILABLE or evaluated_config is None:
-        # If remote_config is not available, use environment variables or fallback
-        env_value = os.environ.get(key, default_value)
-        print(f"Using environment value for {key}: {env_value[:5]}..." if env_value else f"Using default value for {key}")
-        return env_value
-        
     try:
         # Attempt to get the value as a string, common for env vars
         value = evaluated_config.get_string(key)

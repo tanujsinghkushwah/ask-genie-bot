@@ -19,12 +19,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install firebase-admin==6.2.0  # Ensure specific version with remote_config support
-          pip list  # Print installed packages for troubleshooting
       - name: Create service account key file
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > serviceAccountKey.json
-          ls -la  # Verify file was created
       - name: Run bot
         env:
           API_KEY: ${{ secrets.API_KEY }}
