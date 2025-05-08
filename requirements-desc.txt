@@ -1,0 +1,15 @@
+Create a perplexity style twitter bot for my Saas app X profile https://x.com/AskMeGenie
+
+The bot will have following features:
+Searches for posts/comments based on keywords.
+Interacts with these posts/comments using AI at particular times in a day
+Generates Posts (Text+Image) related to latest tech trends
+Responds to any mentions to the profile
+
+Try to use best tech stack components to be free so that whole bot can run free of cost
+
+1. Keywords: Interview, Software Engineer, Leetcode, System Design, High Level Design, Low Level Design, AI, Blockchain, Crypto
+2. AI interaction style would be informative, curious, humble.
+3. We can execute the posts/comments when we choose to run the bot. We can later automate it using a github actions cronjob.
+
+Use gemini API with 'gemini-2.0-flash' model for the bot.
