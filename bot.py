@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 import tweepy
 import google.generativeai as genai
 import schedule
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +27,9 @@ BEARER_TOKEN = os.getenv('BEARER_TOKEN', '')  # Make bearer token optional
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Stable Horde API key
+STABLE_HORDE_API_KEY = os.getenv('STABLE_HORDE_KEY', "")  # Can use "" for anonymous access
+
 # Conversation history for each interaction
 conversation_history = {}
 
@@ -33,7 +37,9 @@ conversation_history = {}
 KEYWORDS = [
     "Interview", "Software Engineer", "Leetcode", 
     "System Design", "High Level Design", "Low Level Design", 
-    "AI", "Blockchain", "Crypto"
+    "AI", "Blockchain", "Crypto", "Cloud Computing", "DevOps",
+    "Microservices", "Database", "Caching", "Operating Systems",
+    "Kubernetes", "Docker", "Machine Learning", "Tech News"
 ]
 
 class GenieTweetBot:
@@ -92,34 +98,145 @@ class GenieTweetBot:
             return None
     
     def generate_image_prompt(self, topic):
-        """Generate a prompt for image creation based on the topic"""
+        """Generate a detailed prompt for image creation based on the topic"""
         prompt = f"""
-        Create a detailed image description for a tech-related image about '{topic}'. 
-        The image should be visually appealing and informative. 
-        Keep the description under 100 words and focus on visual elements.
+        Create a detailed image prompt for a visually captivating tech-related image about '{topic}'. 
+        
+        Your image prompt should:
+        - Be very specific and detailed (at least 50 words)
+        - Include visual elements that would draw attention on social media
+        - Describe lighting, style, mood, and composition
+        - Mention vibrant colors and high contrast elements
+        - Avoid mentioning text or words in the image
+        - Have a modern, professional aesthetic
+        
+        Format your response as a single paragraph with no introductions or explanations.
         """
         
         response = self.model.generate_content(prompt)
-        return response.text
+        # Limit to 300 characters for Stable Horde API
+        image_prompt = response.text.strip()
+        if len(image_prompt) > 500:
+            image_prompt = image_prompt[:500]
+        
+        print(f"Generated image prompt: {image_prompt}")
+        return image_prompt
     
-    def create_image_from_dalle(self, prompt):
-        """Generate an image using DALL-E API (placeholder for future implementation)"""
-        # This is a placeholder function for future integration with DALL-E or similar
-        # For now, we'll return a placeholder image
+    def create_tech_themed_image(self, topic, title):
+        """Generate a visually appealing tech-themed image with text"""
         try:
-            # Generate a simple gradient image as a placeholder
-            width, height = 1024, 1024
-            image = Image.new('RGB', (width, height), color='white')
+            print(f"Creating tech-themed image for: {topic}")
+            width, height = 1200, 630  # Good size for Twitter
             
-            # Save image to a buffer
+            # Create a gradient background
+            image = Image.new('RGB', (width, height), color='white')
+            draw = ImageDraw.Draw(image)
+            
+            # Draw colorful gradient background - tech-themed colors
+            for y in range(height):
+                r = int(20 + (50 * (1 - y / height)))  # Dark blue to lighter blue
+                g = int(40 + (80 * (y / height)))
+                b = int(80 + (120 * (y / height)))
+                for x in range(width):
+                    # Add some horizontal variation too
+                    r_mod = r + int(20 * (x / width))
+                    g_mod = g + int(10 * (x / width))
+                    draw.point((x, y), fill=(r_mod, g_mod, b))
+            
+            # Add some tech-themed decorative elements
+            # Network nodes and connections
+            nodes = []
+            for _ in range(20):
+                x = random.randint(50, width-50)
+                y = random.randint(50, height-50)
+                size = random.randint(5, 15)
+                nodes.append((x, y, size))
+            
+            # Draw connections between nodes
+            for i in range(len(nodes)):
+                for j in range(i+1, min(i+4, len(nodes))):
+                    x1, y1, _ = nodes[i]
+                    x2, y2, _ = nodes[j]
+                    # Calculate distance
+                    dist = ((x2-x1)**2 + (y2-y1)**2)**0.5
+                    if dist < 300:  # Only connect nearby nodes
+                        # Add some curvature for visual interest
+                        draw.line((x1, y1, x2, y2), fill=(180, 220, 255, 128), width=1)
+            
+            # Draw nodes on top of connections
+            for x, y, size in nodes:
+                draw.ellipse((x-size, y-size, x+size, y+size), 
+                             fill=(220, 240, 255), 
+                             outline=(255, 255, 255))
+            
+            # Add some random larger circles for visual interest
+            for _ in range(8):
+                x = random.randint(0, width)
+                y = random.randint(0, height)
+                size = random.randint(50, 150)
+                # Semi-transparent circles
+                for s in range(size, 0, -10):
+                    opacity = int(100 * (s/size))
+                    draw.ellipse((x-s, y-s, x+s, y+s), 
+                                outline=(255, 255, 255, opacity),
+                                width=2)
+            
+            # Add topic text
+            try:
+                # Try to load a nice font, fall back to default if not available
+                try:
+                    title_font = ImageFont.truetype("arial.ttf", 60)
+                    subtitle_font = ImageFont.truetype("arial.ttf", 30)
+                except:
+                    # Fallback fonts
+                    title_font = ImageFont.load_default()
+                    subtitle_font = ImageFont.load_default()
+                
+                # Add a semi-transparent overlay for text
+                overlay = Image.new('RGBA', (width, 200), (0, 0, 0, 150))
+                image.paste(overlay, (0, height-200), overlay)
+                
+                # Wrap title text to fit
+                title_wrapped = textwrap.fill(title, width=30)
+                
+                # Draw title text
+                draw.text((width//2, height-120), title_wrapped, 
+                         fill=(255, 255, 255), 
+                         font=title_font, 
+                         anchor="mm", 
+                         align="center")
+                
+                # Draw subtitle/attribution
+                draw.text((width//2, height-40), "AskMeGenie", 
+                         fill=(200, 200, 255), 
+                         font=subtitle_font,
+                         anchor="mm")
+                
+            except Exception as e:
+                print(f"Error adding text to image: {e}")
+            
+            # Save the image for debugging
+            image_path = "generated_image.jpg"
+            image.save(image_path)
+            print(f"Image saved to {image_path}")
+            
+            # Return the image as a buffer
+            img_buffer = io.BytesIO()
+            image.save(img_buffer, format='JPEG', quality=95)
+            img_buffer.seek(0)
+            return img_buffer
+            
+        except Exception as e:
+            print(f"Error creating tech-themed image: {e}")
+            # Create an even simpler fallback image
+            image = Image.new('RGB', (800, 500), color=(20, 40, 80))
+            draw = ImageDraw.Draw(image)
+            draw.rectangle((10, 10, 790, 490), outline=(255, 255, 255), width=5)
+            
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='JPEG')
             img_buffer.seek(0)
-            
             return img_buffer
-        except Exception as e:
-            print(f"Error creating image: {e}")
-            return None
     
     def search_tweets(self, query, max_results=10):
         """Search for tweets based on keywords"""
@@ -162,27 +279,32 @@ class GenieTweetBot:
             print(f"Error getting mentions: {e}")
             return []
     
-    def post_tweet(self, text, with_image=False, image_topic=None):
+    def post_tweet(self, text, with_image=False, image_topic=None, image_title=None):
         """Post a tweet with optional image"""
         try:
             if with_image and image_topic:
-                # Generate image prompt
-                image_prompt = self.generate_image_prompt(image_topic)
-                
                 # Generate image
-                img_buffer = self.create_image_from_dalle(image_prompt)
+                print(f"Generating image for topic: {image_topic}")
+                
+                if not image_title:
+                    image_title = image_topic
+                
+                img_buffer = self.create_tech_themed_image(image_topic, image_title)
                 
                 if img_buffer:
                     # Upload media
+                    print("Uploading image to Twitter...")
                     media = self.api.media_upload(filename='image.jpg', file=img_buffer)
                     
                     # Post tweet with media
+                    print("Posting tweet with image...")
                     response = self.client.create_tweet(
                         text=text,
                         media_ids=[media.media_id]
                     )
                 else:
                     # Fallback to text-only tweet
+                    print("Image generation failed, posting text-only tweet")
                     response = self.client.create_tweet(text=text)
             else:
                 # Text-only tweet
@@ -233,7 +355,11 @@ class GenieTweetBot:
         Here's a tweet: "{tweet_text}"
         
         Craft a thoughtful, informative reply that demonstrates expertise while being humble and curious. 
+        Make it conversational and human-like, as if written by a tech professional.
+        Add a touch of personality and warmth to it.
         Keep it under 240 characters and make it engaging without using hashtags.
+        
+        Don't use phrases like "As an AI" or anything that reveals you're an AI.
         """
         
         response = self.generate_ai_response(prompt, conversation_id=str(tweet.id))
@@ -269,8 +395,12 @@ class GenieTweetBot:
             
             A user has mentioned you in this tweet: "{tweet_text}"
             
-            Respond helpfully and concisely (under 240 characters). If they're asking a question, provide a clear answer.
-            If unclear, ask for clarification. Maintain a helpful, humble tone.
+            Respond in a casual, friendly tone like a tech professional would. Be concise (under 240 characters).
+            If they're asking a question, provide a clear answer.
+            If unclear, ask for clarification.
+            
+            Don't use phrases like "As an AI" or anything that reveals you're an AI.
+            Make it sound natural like a human tech expert's tweet.
             """
             
             response = self.generate_ai_response(prompt, conversation_id=str(mention.id))
@@ -283,39 +413,54 @@ class GenieTweetBot:
         return newest_id
     
     def generate_tech_post(self):
-        """Generate and post content about latest tech trends"""
+        """Generate and post content about latest tech trends with engaging images"""
         print("Generating tech post...")
         
-        # Randomly decide if post should include an image
-        with_image = random.choice([True, False])
+        # Always include an image for better engagement
+        with_image = True
         
-        # Generate post content
-        prompt = """
-        You are AskMeGenie, a tech thought leader.
+        # Select a random tech topic from keywords or generate a novel one
+        base_topic = random.choice(KEYWORDS)
         
-        Generate a viral, insightful tweet about a current tech trend, software engineering best practice, 
-        or career advice that would be valuable to developers and tech professionals.
-        
-        The tweet should be under 240 characters, thought-provoking, and valuable without using hashtags.
-        Make it sound authentic and conversational, not promotional.
+        # Generate a more specific tech topic based on the base topic
+        topic_prompt = f"""
+        Based on the general topic '{base_topic}', generate a specific, current tech subtopic 
+        that would be interesting to software engineers and tech professionals in 2024.
+        Your response should be ONLY the specific topic name in 3-5 words, nothing else.
         """
         
-        post_content = self.generate_ai_response(prompt)
+        specific_topic = self.generate_ai_response(topic_prompt)
+        if not specific_topic:
+            specific_topic = base_topic
+            
+        # Trim any extra whitespace or punctuation
+        specific_topic = specific_topic.strip().strip('"\'.,;:')
+        print(f"Selected specific tech topic: {specific_topic}")
+        
+        # Generate engaging post content
+        post_prompt = f"""
+        You're a tech thought leader posting on X (Twitter).
+        
+        Create an insightful, engaging tweet about '{specific_topic}' for software engineers and tech professionals.
+        
+        Your tweet should:
+        - Start with a hook (question, surprising fact, or bold statement)
+        - Include a useful insight or tip
+        - Sound natural and conversational, not formal
+        - End with a thought-provoking point or call to action
+        - Be under 240 characters
+        - NOT use hashtags
+        - NOT mention that you're an AI or bot
+        
+        Write it like a real human tech expert would write it - casual, direct, and with personality.
+        """
+        
+        post_content = self.generate_ai_response(post_prompt)
         
         if post_content:
-            # If with image, we need a topic for the image
-            image_topic = None
-            if with_image:
-                # Extract main topic from post content
-                topic_prompt = f"""
-                Extract the main tech topic from this tweet in 2-3 words only: "{post_content}"
-                Just respond with those 2-3 words, nothing else.
-                """
-                image_topic = self.generate_ai_response(topic_prompt)
-            
-            # Post the tweet
-            self.post_tweet(post_content, with_image=with_image, image_topic=image_topic)
-            print("Tech post generated and posted")
+            # Post the tweet with an image
+            self.post_tweet(post_content, with_image=with_image, image_topic=specific_topic, image_title=specific_topic)
+            print("Tech post generated and posted with image")
 
 def run_bot(task=None):
     """Run the bot with specified task or all tasks"""
