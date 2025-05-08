@@ -6,6 +6,8 @@ A perplexity-style Twitter bot for tech content that:
 - Generates tech content posts (text + images)
 - Responds to mentions automatically
 
+Twitter: [@AskMeGenie](https://x.com/AskMeGenie)
+
 ## Features
 
 - **Keyword Monitoring**: Automatically searches for tweets containing specific keywords (Interview, Software Engineer, Leetcode, System Design, etc.)
