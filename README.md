@@ -1,12 +1,12 @@
 # AskMeGenie Twitter Bot
 
+Twitter: [@AskMeGenie](https://x.com/AskMeGenie)
+
 A perplexity-style Twitter bot for tech content that:
 - Searches for posts based on tech/programming keywords
 - Interacts with posts using AI responses
 - Generates tech content posts (text + images)
 - Responds to mentions automatically
-
-Twitter: [@AskMeGenie](https://x.com/AskMeGenie)
 
 ## Features
 
