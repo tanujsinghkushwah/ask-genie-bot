@@ -27,6 +27,9 @@ BEARER_TOKEN = os.getenv('BEARER_TOKEN', '')  # Make bearer token optional
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Image Router API 
+IMAGE_ROUTER_API_KEY = os.getenv('IMAGE_ROUTER_API', '')
+
 # Stable Horde API key
 STABLE_HORDE_API_KEY = os.getenv('STABLE_HORDE_KEY', "")  # Can use "" for anonymous access
 
@@ -279,6 +282,73 @@ class GenieTweetBot:
             print(f"Error getting mentions: {e}")
             return []
     
+    def create_image_with_router_api(self, prompt):
+        """Generate an image using the Image Router API"""
+        try:
+            print(f"Generating image using Image Router API with prompt: {prompt}")
+            
+            # API endpoint
+            url = "https://ir-api.myqa.cc/v1/openai/images/generations"
+            
+            # Headers
+            headers = {
+                "Authorization": f"Bearer {IMAGE_ROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            # Request payload
+            data = {
+                "prompt": prompt,
+                "model": "google/gemini-2.0-flash-exp:free",
+                "quality": "auto"
+            }
+            
+            # Make the API request
+            print("Sending request to Image Router API...")
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()  # Raise exception for non-200 responses
+            
+            # Parse the response
+            response_data = response.json()
+            print(f"Response received, status: {response.status_code}")
+            
+            # Check if we have image data
+            if not response_data.get("data") or not response_data["data"][0].get("b64_json"):
+                print("No image data found in response")
+                # Log the response structure for debugging
+                print(f"Response structure: {response_data.keys()}")
+                raise Exception("No image data in response")
+            
+            # Get the base64 image data
+            base64_image = response_data["data"][0]["b64_json"]
+            print(f"Received base64 image data, length: {len(base64_image)}")
+            
+            # Decode the base64 image
+            image_data = base64.b64decode(base64_image)
+            
+            # Create an image buffer
+            img_buffer = io.BytesIO(image_data)
+            
+            # Verify the image by opening it
+            img = Image.open(img_buffer)
+            img.verify()  # Will raise an exception if it's not a valid image
+            
+            # Save a copy for debugging
+            img_buffer.seek(0)
+            img = Image.open(img_buffer)
+            img.save("router_api_image.jpg")
+            print(f"Image saved as 'router_api_image.jpg'")
+            
+            # Return the image buffer
+            img_buffer.seek(0)
+            return img_buffer
+            
+        except Exception as e:
+            print(f"Error generating image with Router API: {e}")
+            print("Falling back to local image generation...")
+            # Fall back to our local image generation if the API fails
+            return self.create_tech_themed_image(prompt, prompt)
+    
     def post_tweet(self, text, with_image=False, image_topic=None, image_title=None):
         """Post a tweet with optional image"""
         try:
@@ -289,7 +359,11 @@ class GenieTweetBot:
                 if not image_title:
                     image_title = image_topic
                 
-                img_buffer = self.create_tech_themed_image(image_topic, image_title)
+                # Generate a detailed prompt for the image
+                image_prompt = self.generate_image_prompt(image_topic)
+                
+                # Use the Router API to generate the image
+                img_buffer = self.create_image_with_router_api(image_prompt)
                 
                 if img_buffer:
                     # Upload media
