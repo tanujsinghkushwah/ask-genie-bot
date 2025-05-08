@@ -6,32 +6,91 @@ import base64
 import io
 from datetime import datetime
 import requests
-from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, remote_config
+import asyncio # Required for template.load()
 import tweepy
 import google.generativeai as genai
 import schedule
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
-# Load environment variables
-load_dotenv()
+# Hardcoded ultimate fallbacks, used if Remote Config is entirely unavailable
+# and get_config_value isn't called with a specific default.
+# These are passed to init_server_template's default_config.
+ULTIMATE_FALLBACK_DEFAULTS = {
+    'API_KEY': 'YOUR_FALLBACK_API_KEY_IN_CODE',
+    'API_KEY_SECRET': 'YOUR_FALLBACK_API_KEY_SECRET_IN_CODE',
+    'ACCESS_TOKEN': 'YOUR_FALLBACK_ACCESS_TOKEN_IN_CODE',
+    'ACCESS_TOKEN_SECRET': 'YOUR_FALLBACK_ACCESS_TOKEN_SECRET_IN_CODE',
+    'GEMINI_API_KEY': 'YOUR_FALLBACK_GEMINI_API_KEY_IN_CODE',
+    'BEARER_TOKEN': '',
+    'IMAGE_ROUTER_API': '',
+    'STABLE_HORDE_KEY': ''
+}
+
+def initialize_firebase_and_load_config():
+    """Initializes Firebase app and loads Remote Config template."""
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        cred = credentials.Certificate('serviceAccountKey.json')
+        firebase_admin.initialize_app(cred)
+    
+    print("Initializing Remote Config server template...")
+    # Initialize with ultimate fallbacks. Remote values will override these.
+    template = remote_config.init_server_template(default_config=ULTIMATE_FALLBACK_DEFAULTS)
+    
+    print("Loading Remote Config template from Firebase backend...")
+    try:
+        asyncio.run(template.load()) # Fetches the template and merges with defaults
+        print("Remote Config template loaded successfully.")
+    except Exception as e:
+        print(f"ERROR loading Remote Config template from backend: {e}")
+        print("Proceeding with ULTIMATE_FALLBACK_DEFAULTS or specific get_config_value defaults.")
+        # If load fails, template still contains ULTIMATE_FALLBACK_DEFAULTS
+
+    print("Evaluating Remote Config template...")
+    return template.evaluate() # Returns a firebase_admin.remote_config.Config object
+
+def get_config_value(evaluated_config, key, default_value=""):
+    """Gets a config value from the evaluated Remote Config object."""
+    try:
+        # Attempt to get the value as a string, common for env vars
+        value = evaluated_config.get_string(key)
+        source = evaluated_config.get_value_source(key)
+        # print(f"Retrieved '{key}' from Remote Config: '{value}' (Source: {source})") # Optional: verbose logging
+        return value
+    except ValueError:
+        # This can happen if the key exists but is not a string (e.g., boolean, number)
+        # or, more commonly, if the key is not found (neither remote nor in init_server_template's defaults)
+        # In this case, we rely on the default_value passed to this function.
+        # print(f"Key '{key}' not found as string or not string type in evaluated_config. Using function default: '{default_value}'.") # Optional: verbose logging
+        return default_value
+    except Exception as e:
+        print(f"Error fetching '{key}' from evaluated_config: {e}. Using function default: '{default_value}'.")
+        return default_value
+
+# --- Initialize Firebase and Load Remote Config ONCE at startup ---
+evaluated_remote_config = initialize_firebase_and_load_config()
+# ------------------------------------------------------------------
 
 # Twitter API credentials
-API_KEY = os.getenv('API_KEY')
-API_KEY_SECRET = os.getenv('API_KEY_SECRET')
-ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')
-ACCESS_TOKEN_SECRET = os.getenv('ACCESS_TOKEN_SECRET')
-BEARER_TOKEN = os.getenv('BEARER_TOKEN', '')  # Make bearer token optional
+API_KEY = get_config_value(evaluated_remote_config, 'API_KEY', ULTIMATE_FALLBACK_DEFAULTS['API_KEY'])
+API_KEY_SECRET = get_config_value(evaluated_remote_config, 'API_KEY_SECRET', ULTIMATE_FALLBACK_DEFAULTS['API_KEY_SECRET'])
+ACCESS_TOKEN = get_config_value(evaluated_remote_config, 'ACCESS_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN'])
+ACCESS_TOKEN_SECRET = get_config_value(evaluated_remote_config, 'ACCESS_TOKEN_SECRET', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN_SECRET'])
+BEARER_TOKEN = get_config_value(evaluated_remote_config, 'BEARER_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['BEARER_TOKEN'])
 
 # Gemini API credentials
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GEMINI_API_KEY = get_config_value(evaluated_remote_config, 'GEMINI_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_API_KEY'])
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Image Router API 
-IMAGE_ROUTER_API_KEY = os.getenv('IMAGE_ROUTER_API', '')
+IMAGE_ROUTER_API_KEY = get_config_value(evaluated_remote_config, 'IMAGE_ROUTER_API', ULTIMATE_FALLBACK_DEFAULTS['IMAGE_ROUTER_API'])
 
 # Stable Horde API key
-STABLE_HORDE_API_KEY = os.getenv('STABLE_HORDE_KEY', "")  # Can use "" for anonymous access
+STABLE_HORDE_API_KEY = get_config_value(evaluated_remote_config, 'STABLE_HORDE_KEY', ULTIMATE_FALLBACK_DEFAULTS['STABLE_HORDE_KEY'])
 
 # Conversation history for each interaction
 conversation_history = {}

@@ -36,6 +36,33 @@ A perplexity-style Twitter bot for tech content that:
 4. Obtain Twitter API credentials from the [Twitter Developer Portal](https://developer.twitter.com/)
 5. Get a Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
+## Firebase Remote Config Setup
+
+This project uses Firebase Remote Config to manage environment variables. Follow these steps to set it up:
+
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Set up Remote Config in your Firebase project
+3. Add the following parameters to your Remote Config:
+   - `API_KEY` - Twitter API Key
+   - `API_KEY_SECRET` - Twitter API Key Secret
+   - `ACCESS_TOKEN` - Twitter Access Token
+   - `ACCESS_TOKEN_SECRET` - Twitter Access Token Secret
+   - `BEARER_TOKEN` - Twitter Bearer Token (optional)
+   - `GEMINI_API_KEY` - Google Gemini API Key
+   - `IMAGE_ROUTER_API` - Image Router API Key (optional)
+   - `STABLE_HORDE_KEY` - Stable Horde API Key (optional)
+
+4. Set up Firebase Admin SDK authentication:
+   - For local development:
+     - Generate a service account key from Firebase Console → Project Settings → Service Accounts
+     - Set the environment variable: `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"`
+   - For deployment:
+     - Configure appropriate credentials based on your hosting environment
+
+5. Install the requirements: `pip install -r requirements.txt`
+
+Note: The bot will now fetch config values from Firebase Remote Config instead of a .env file.
+
 ## Usage
 
 ### Running Manually
