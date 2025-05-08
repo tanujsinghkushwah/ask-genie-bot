@@ -409,72 +409,78 @@ class GenieTweetBot:
             return self.create_tech_themed_image(prompt, prompt)
     
     def post_tweet(self, text, with_image=False, image_topic=None, image_title=None):
-        """Post a tweet, optionally with an image, and retry on failure."""
+        """Post a tweet with optional image"""
         max_retries = 3
-        retry_delay_seconds = 10
-
-        for attempt in range(max_retries):
+        retry_delay = 10
+        retry_count = 0
+        
+        while retry_count < max_retries:
             try:
-                media_id = None
-                if with_image:
-                    image_path = None
-                    if IMAGE_ROUTER_API_KEY: # Prioritize Image Router API
-                        print("Generating image using Image Router API...")
-                        image_prompt = self.generate_image_prompt(image_topic if image_topic else "general tech")
-                        if image_prompt:
-                            image_path = self.create_image_with_router_api(image_prompt)
+                if with_image and image_topic:
+                    # Generate image
+                    print(f"Generating image for topic: {image_topic}")
                     
-                    if not image_path: # Fallback to local image generation
-                        print("Fallback: Generating image locally...")
-                        image_path = self.create_tech_themed_image(
-                            topic=image_topic if image_topic else "Tech News",
-                            title=image_title if image_title else "Latest Update"
+                    if not image_title:
+                        image_title = image_topic
+                    
+                    # Generate a detailed prompt for the image
+                    image_prompt = self.generate_image_prompt(image_topic)
+                    
+                    # Use the Router API to generate the image
+                    img_buffer = self.create_image_with_router_api(image_prompt)
+                    
+                    if img_buffer:
+                        # Upload media
+                        print("Uploading image to Twitter...")
+                        media = self.api.media_upload(filename='image.jpg', file=img_buffer)
+                        
+                        # Post tweet with media
+                        print("Posting tweet with image...")
+                        response = self.client.create_tweet(
+                            text=text,
+                            media_ids=[media.media_id]
                         )
-
-                    if image_path:
-                        print(f"Uploading image to Twitter: {image_path}")
-                        media = self.api.media_upload(filename=image_path)
-                        media_id = media.media_id
-                        print(f"Image uploaded, media ID: {media_id}")
                     else:
-                        print("Failed to generate or find an image for the tweet.")
-
-                print(f"Posting tweet (attempt {attempt + 1}/{max_retries}): {text}")
-                if media_id:
-                    response = self.client.create_tweet(text=text, media_ids=[media_id])
+                        # Fallback to text-only tweet
+                        print("Image generation failed, posting text-only tweet")
+                        response = self.client.create_tweet(text=text)
                 else:
+                    # Text-only tweet
                     response = self.client.create_tweet(text=text)
-                
+                    
                 print(f"Tweet posted successfully: {response.data['id']}")
                 return response.data['id']
-
-            except tweepy.TooManyRequests as e: # Specific exception for 429
-                print(f"Error posting tweet (TooManyRequests): {e}")
-                if attempt < max_retries - 1:
-                    print(f"Retrying in {retry_delay_seconds} seconds...")
-                    time.sleep(retry_delay_seconds)
+            except Exception as e:
+                retry_count += 1
+                if retry_count < max_retries:
+                    print(f"Error posting tweet: {e}. Retrying in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
+                    time.sleep(retry_delay)
                 else:
-                    print("Max retries reached. Failed to post tweet.")
+                    print(f"Failed to post tweet after {max_retries} attempts: {e}")
                     return None
-            except Exception as e: # Catch other potential exceptions
-                print(f"Error posting tweet: {e}")
-                # Optionally, you could add retries for other specific exceptions here
-                # For now, we'll only retry on TooManyRequests
-                return None
-        return None # Should be unreachable if loop completes, but good for clarity
     
     def reply_to_tweet(self, tweet_id, text):
         """Reply to a specific tweet"""
-        try:
-            response = self.client.create_tweet(
-                text=text,
-                in_reply_to_tweet_id=tweet_id
-            )
-            print(f"Reply posted successfully: {response.data['id']}")
-            return response.data['id']
-        except Exception as e:
-            print(f"Error replying to tweet: {e}")
-            return None
+        max_retries = 3
+        retry_delay = 10
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                response = self.client.create_tweet(
+                    text=text,
+                    in_reply_to_tweet_id=tweet_id
+                )
+                print(f"Reply posted successfully: {response.data['id']}")
+                return response.data['id']
+            except Exception as e:
+                retry_count += 1
+                if retry_count < max_retries:
+                    print(f"Error replying to tweet: {e}. Retrying in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
+                    time.sleep(retry_delay)
+                else:
+                    print(f"Failed to reply to tweet after {max_retries} attempts: {e}")
+                    return None
     
     def interact_with_keyword_tweets(self):
         """Find and interact with tweets containing keywords"""
