@@ -11,7 +11,7 @@ A perplexity-style Twitter bot for tech content that:
 ## Features
 
 - **Keyword Monitoring**: Automatically searches for tweets containing specific keywords (Interview, Software Engineer, Leetcode, System Design, etc.)
-- **AI-Powered Interactions**: Uses Gemini 2.0 Flash model for generating thoughtful, informative responses
+- **AI-Powered Interactions**: Uses Groq (Llama 3.1 8B-instant) or Gemini 2.5 Flash model for generating thoughtful, informative responses with automatic fallback support
 - **Content Generation**: Creates high-quality tech posts with optional images
 - **Mention Responses**: Automatically responds to any mentions of your account
 - **Modular Architecture**: Clean, maintainable codebase organized by functionality
@@ -33,11 +33,20 @@ A perplexity-style Twitter bot for tech content that:
    ACCESS_TOKEN_SECRET=your_twitter_access_token_secret
    BEARER_TOKEN=your_twitter_bearer_token
 
-   # Gemini API credentials
+   # AI Provider Configuration (choose one or both)
+   AI_PROVIDER=groq  # Options: 'groq' or 'gemini' (default: 'groq')
+   
+   # Groq API credentials
+   GROQ_API_KEY=your_groq_api_key
+   GROQ_MODEL_NAME=llama-3.1-8b-instant
+   
+   # Gemini API credentials (optional - can be used as fallback or primary)
    GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_MODEL_NAME=gemini-2.5-flash
    ```
 4. Obtain Twitter API credentials from the [Twitter Developer Portal](https://developer.twitter.com/)
-5. Get a Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+5. Get a Groq API key from [Groq Console](https://console.groq.com/) (recommended - 14,400 requests/day free tier)
+6. Optionally get a Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey) for fallback (20 requests/day free tier)
 
 ## Firebase Remote Config Setup
 
@@ -51,7 +60,11 @@ This project uses Firebase Remote Config to manage environment variables. Follow
    - `ACCESS_TOKEN` - Twitter Access Token
    - `ACCESS_TOKEN_SECRET` - Twitter Access Token Secret
    - `BEARER_TOKEN` - Twitter Bearer Token (optional)
-   - `GEMINI_API_KEY` - Google Gemini API Key
+   - `AI_PROVIDER` - AI Provider to use: 'groq' or 'gemini' (default: 'groq')
+   - `GROQ_API_KEY` - Groq API Key (recommended)
+   - `GROQ_MODEL_NAME` - Groq model name (default: 'llama-3.1-8b-instant')
+   - `GEMINI_API_KEY` - Google Gemini API Key (optional, used as fallback or primary if AI_PROVIDER='gemini')
+   - `GEMINI_MODEL_NAME` - Gemini model name (default: 'gemini-2.5-flash')
 
 4. Set up Firebase Admin SDK authentication:
    - For local development:

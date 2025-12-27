@@ -38,29 +38,28 @@ def initialize_firebase_and_load_config():
 
 
 def get_config_value(evaluated_config, key, default_value=""):
-    """Gets a config value from the evaluated Remote Config object, with fallback to .env file."""
+    """Gets a config value, prioritizing .env file over Remote Config for sensitive keys."""
+    # PRIORITY 1: Check environment variables (.env file) first
+    # This allows local development to override Remote Config values
+    env_value = os.getenv(key)
+    if env_value:
+        # print(f"Retrieved '{key}' from environment variable") # Optional: verbose logging
+        return env_value
+    
+    # PRIORITY 2: Try Remote Config
     try:
         # Attempt to get the value as a string, common for env vars
         value = evaluated_config.get_string(key)
         source = evaluated_config.get_value_source(key)
-        # print(f"Retrieved '{key}' from Remote Config: '{value}' (Source: {source})") # Optional: verbose logging
+        # print(f"Retrieved '{key}' from Remote Config (Source: {source})") # Optional: verbose logging
         return value
     except ValueError:
         # This can happen if the key exists but is not a string (e.g., boolean, number)
-        # or, more commonly, if the key is not found (neither remote nor in init_server_template's defaults)
-        # In this case, check environment variables (.env file) as fallback
-        env_value = os.getenv(key)
-        if env_value:
-            # print(f"Retrieved '{key}' from environment variable: '{env_value}'") # Optional: verbose logging
-            return env_value
-        # print(f"Key '{key}' not found as string or not string type in evaluated_config. Using function default: '{default_value}'.") # Optional: verbose logging
+        # or, more commonly, if the key is not found
+        # print(f"Key '{key}' not found in Remote Config. Using function default: '{default_value}'.") # Optional: verbose logging
         return default_value
     except Exception as e:
-        print(f"Error fetching '{key}' from evaluated_config: {e}. Checking environment variables...")
-        # Fallback to environment variable
-        env_value = os.getenv(key)
-        if env_value:
-            return env_value
+        print(f"Error fetching '{key}' from evaluated_config: {e}.")
         print(f"Using function default: '{default_value}'.")
         return default_value
 
@@ -77,7 +76,13 @@ def load_config():
         'ACCESS_TOKEN': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN']),
         'ACCESS_TOKEN_SECRET': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN_SECRET', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN_SECRET']),
         'BEARER_TOKEN': get_config_value(evaluated_remote_config, 'BEARER_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['BEARER_TOKEN']),
+        # AI Provider settings
+        'AI_PROVIDER': get_config_value(evaluated_remote_config, 'AI_PROVIDER', ULTIMATE_FALLBACK_DEFAULTS['AI_PROVIDER']),
+        'GROQ_API_KEY': get_config_value(evaluated_remote_config, 'GROQ_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GROQ_API_KEY']),
+        'GROQ_MODEL_NAME': get_config_value(evaluated_remote_config, 'GROQ_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GROQ_MODEL_NAME']),
         'GEMINI_API_KEY': get_config_value(evaluated_remote_config, 'GEMINI_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_API_KEY']),
+        'GEMINI_MODEL_NAME': get_config_value(evaluated_remote_config, 'GEMINI_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_MODEL_NAME']),
+        # Legacy support
         'MODEL_NAME': get_config_value(evaluated_remote_config, 'MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['MODEL_NAME']),
     }
     
