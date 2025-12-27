@@ -1,5 +1,6 @@
 """Twitter API client for posting tweets and interacting with Twitter."""
 
+from typing import Optional
 import time
 import tweepy
 
@@ -57,7 +58,7 @@ class TwitterClient:
             print(f"Error searching tweets: {e}")
             return []
     
-    def get_mentions(self, since_id: int = None):
+    def get_mentions(self, since_id: Optional[int] = None):
         """Get mentions directed at the bot."""
         try:
             # Get mentions

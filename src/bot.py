@@ -1,5 +1,6 @@
 """Main bot class that orchestrates all bot functionality."""
 
+from typing import Optional
 import random
 from .twitter_client import TwitterClient
 from .ai_service import AIService
@@ -21,15 +22,40 @@ class GenieTweetBot:
             bearer_token=config['BEARER_TOKEN']
         )
         
+        # Determine which provider to use and set up API keys
+        provider = config.get('AI_PROVIDER', 'groq').lower()
+        
+        if provider == 'groq':
+            api_key = str(config.get('GROQ_API_KEY', ''))
+            model_name = str(config.get('GROQ_MODEL_NAME', 'llama-3.1-8b-instant'))
+            # Use Gemini as fallback if available
+            gemini_key = config.get('GEMINI_API_KEY')
+            gemini_model = config.get('GEMINI_MODEL_NAME') or config.get('MODEL_NAME', 'gemini-2.5-flash')
+            fallback_api_key = str(gemini_key) if gemini_key else None
+            fallback_model = str(gemini_model) if gemini_model else None
+        else:  # gemini
+            gemini_key = config.get('GEMINI_API_KEY') or config.get('MODEL_NAME', '')
+            api_key = str(gemini_key) if gemini_key else ''
+            model_name = str(config.get('GEMINI_MODEL_NAME') or config.get('MODEL_NAME', 'gemini-2.5-flash') or 'gemini-2.5-flash')
+            fallback_api_key = None
+            fallback_model = None
+        
         self.ai_service = AIService(
-            api_key=config['GEMINI_API_KEY'],
-            model_name=config['MODEL_NAME']
+            provider=provider,
+            api_key=api_key,
+            model_name=model_name,
+            fallback_api_key=fallback_api_key,
+            fallback_model=fallback_model
         )
         
         self.image_generator = ImageGenerator()
     
-    def post_tweet(self, text: str, with_image: bool = False, image_topic: str = None, image_title: str = None):
+    def post_tweet(self, text: str, with_image: bool = False, image_topic: Optional[str] = None, image_title: Optional[str] = None):
         """Post a tweet with optional image."""
+        # Add interviewgenie.net link at the end of the tweet
+        website_link = "\n\nLearn more at interviewgenie.net"
+        tweet_text = text + website_link
+        
         if with_image and image_topic:
             # Generate image
             print(f"Generating image for topic: {image_topic}")
@@ -39,6 +65,10 @@ class GenieTweetBot:
             
             # Generate a detailed prompt for the image, passing tweet content for better relevance
             image_prompt = self.ai_service.generate_image_prompt(image_topic, tweet_content=text)
+            
+            if not image_prompt:
+                print("Image prompt generation failed, posting text-only tweet")
+                return self.twitter_client.post_tweet(tweet_text)
             
             # Use Pollinations API to generate the image
             img_buffer = self.image_generator.create_image_with_pollinations_api(
@@ -54,18 +84,18 @@ class GenieTweetBot:
                 if media_id:
                     # Post tweet with media
                     print("Posting tweet with image...")
-                    return self.twitter_client.post_tweet(text, media_ids=[media_id])
+                    return self.twitter_client.post_tweet(tweet_text, media_ids=[media_id])
                 else:
                     # Fallback to text-only tweet
                     print("Media upload failed, posting text-only tweet")
-                    return self.twitter_client.post_tweet(text)
+                    return self.twitter_client.post_tweet(tweet_text)
             else:
                 # Fallback to text-only tweet
                 print("Image generation failed, posting text-only tweet")
-                return self.twitter_client.post_tweet(text)
+                return self.twitter_client.post_tweet(tweet_text)
         else:
             # Text-only tweet
-            return self.twitter_client.post_tweet(text)
+            return self.twitter_client.post_tweet(tweet_text)
     
     def interact_with_keyword_tweets(self):
         """Find and interact with tweets containing keywords."""
@@ -111,7 +141,7 @@ class GenieTweetBot:
             self.twitter_client.reply_to_tweet(tweet.id, response)
             print(f"Interacted with tweet: {tweet.id}")
     
-    def respond_to_mentions(self, since_id: int = None):
+    def respond_to_mentions(self, since_id: Optional[int] = None):
         """Respond to mentions of the bot."""
         print("Checking for mentions...")
         
