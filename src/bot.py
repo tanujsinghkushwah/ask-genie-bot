@@ -1,0 +1,214 @@
+"""Main bot class that orchestrates all bot functionality."""
+
+import random
+from .twitter_client import TwitterClient
+from .ai_service import AIService
+from .image_generator import ImageGenerator
+from .constants import KEYWORDS
+
+
+class GenieTweetBot:
+    """Main bot class for AskMeGenie Twitter bot."""
+    
+    def __init__(self, config: dict):
+        """Initialize the bot with configuration."""
+        # Initialize services
+        self.twitter_client = TwitterClient(
+            api_key=config['API_KEY'],
+            api_key_secret=config['API_KEY_SECRET'],
+            access_token=config['ACCESS_TOKEN'],
+            access_token_secret=config['ACCESS_TOKEN_SECRET'],
+            bearer_token=config['BEARER_TOKEN']
+        )
+        
+        self.ai_service = AIService(
+            api_key=config['GEMINI_API_KEY'],
+            model_name=config['MODEL_NAME']
+        )
+        
+        self.image_generator = ImageGenerator()
+    
+    def post_tweet(self, text: str, with_image: bool = False, image_topic: str = None, image_title: str = None):
+        """Post a tweet with optional image."""
+        if with_image and image_topic:
+            # Generate image
+            print(f"Generating image for topic: {image_topic}")
+            
+            if not image_title:
+                image_title = image_topic
+            
+            # Generate a detailed prompt for the image
+            image_prompt = self.ai_service.generate_image_prompt(image_topic)
+            
+            # Use Pollinations API to generate the image
+            img_buffer = self.image_generator.create_image_with_pollinations_api(
+                image_prompt,
+                fallback_generator=self.image_generator.create_tech_themed_image
+            )
+            
+            if img_buffer:
+                # Upload media
+                print("Uploading image to Twitter...")
+                media_id = self.twitter_client.upload_media(img_buffer)
+                
+                if media_id:
+                    # Post tweet with media
+                    print("Posting tweet with image...")
+                    return self.twitter_client.post_tweet(text, media_ids=[media_id])
+                else:
+                    # Fallback to text-only tweet
+                    print("Media upload failed, posting text-only tweet")
+                    return self.twitter_client.post_tweet(text)
+            else:
+                # Fallback to text-only tweet
+                print("Image generation failed, posting text-only tweet")
+                return self.twitter_client.post_tweet(text)
+        else:
+            # Text-only tweet
+            return self.twitter_client.post_tweet(text)
+    
+    def interact_with_keyword_tweets(self):
+        """Find and interact with tweets containing keywords."""
+        print(f"Searching for tweets with keywords...")
+        
+        # Select random keyword to search for
+        keyword = random.choice(KEYWORDS)
+        
+        # Get tweets containing the keyword
+        tweets = self.twitter_client.search_tweets(keyword, max_results=5)
+        
+        if not tweets:
+            return
+        
+        # Select a random tweet to interact with
+        tweet = random.choice(tweets)
+        
+        # Generate a response
+        original_tweet = self.twitter_client.get_tweet(tweet.id)
+        if not original_tweet:
+            return
+        
+        tweet_text = original_tweet.text
+        
+        prompt = f"""
+        You are AskMeGenie, a helpful AI assistant specializing in software engineering, tech trends, and career advice.
+        
+        Here's a tweet: "{tweet_text}"
+        
+        Craft a thoughtful, informative reply that demonstrates expertise while being humble and curious. 
+        Make it conversational and human-like, as if written by a tech professional.
+        Add a touch of personality and warmth to it.
+        Keep it under 240 characters and make it engaging without using hashtags.
+        
+        Don't use phrases like "As an AI" or anything that reveals you're an AI.
+        Do not use asterisks for emphasis (like *word* or *phrase*) in your response.
+        """
+        
+        response = self.ai_service.generate_response(prompt, conversation_id=str(tweet.id))
+        
+        if response:
+            # Reply to the tweet
+            self.twitter_client.reply_to_tweet(tweet.id, response)
+            print(f"Interacted with tweet: {tweet.id}")
+    
+    def respond_to_mentions(self, since_id: int = None):
+        """Respond to mentions of the bot."""
+        print("Checking for mentions...")
+        
+        # Get mentions
+        mentions = self.twitter_client.get_mentions(since_id=since_id)
+        
+        if not mentions:
+            return since_id
+        
+        newest_id = since_id
+        
+        for mention in mentions:
+            if newest_id is None or mention.id > newest_id:
+                newest_id = mention.id
+            
+            # Get the tweet text
+            tweet = self.twitter_client.get_tweet(mention.id)
+            if not tweet:
+                continue
+            
+            tweet_text = tweet.text
+            
+            # Generate response
+            prompt = f"""
+            You are AskMeGenie, a helpful AI assistant specializing in software engineering, tech trends, and career advice.
+            
+            A user has mentioned you in this tweet: "{tweet_text}"
+            
+            Respond in a casual, friendly tone like a tech professional would. Be concise (under 240 characters).
+            If they're asking a question, provide a clear answer.
+            If unclear, ask for clarification.
+            
+            Don't use phrases like "As an AI" or anything that reveals you're an AI.
+            Make it sound natural like a human tech expert's tweet.
+            Do not use asterisks for emphasis (like *word* or *phrase*) in your response.
+            """
+            
+            response = self.ai_service.generate_response(prompt, conversation_id=str(mention.id))
+            
+            if response:
+                # Reply to the mention
+                self.twitter_client.reply_to_tweet(mention.id, response)
+                print(f"Responded to mention: {mention.id}")
+        
+        return newest_id
+    
+    def generate_tech_post(self):
+        """Generate and post content about latest tech trends with engaging images."""
+        print("Generating tech post...")
+        
+        # Always include an image for better engagement
+        with_image = True
+        
+        # Select a random tech topic from keywords or generate a novel one
+        base_topic = random.choice(KEYWORDS)
+        
+        # Generate a more specific tech topic based on the base topic
+        topic_prompt = f"""
+        Based on the general topic '{base_topic}', generate a specific, current tech subtopic 
+        that would be interesting to software engineers and tech professionals in 2024.
+        Your response should be ONLY the specific topic name in 3-5 words, nothing else.
+        """
+        
+        specific_topic = self.ai_service.generate_response(topic_prompt)
+        if not specific_topic:
+            specific_topic = base_topic
+            
+        # Trim any extra whitespace or punctuation
+        specific_topic = specific_topic.strip().strip('"\'.,;:')
+        print(f"Selected specific tech topic: {specific_topic}")
+        
+        # Generate engaging post content
+        post_prompt = f"""
+        You're a tech thought leader posting on X (Twitter).
+        
+        Create an insightful, engaging tweet about '{specific_topic}' for software engineers and tech professionals.
+        
+        Your tweet should:
+        - Start with a hook (question, surprising fact, or bold statement)
+        - Include a useful insight or tip
+        - Sound natural and conversational, not formal
+        - End with a thought-provoking point or call to action
+        - Be under 240 characters
+        - NOT use hashtags
+        - NOT mention that you're an AI or bot
+        - NOT use asterisks for emphasis (like *word* or *phrase*)
+        
+        Write it like a real human tech expert would write it - casual, direct, and with personality.
+        """
+        
+        post_content = self.ai_service.generate_response(post_prompt)
+        
+        if post_content:
+            # Post the tweet with an image
+            self.post_tweet(post_content, with_image=with_image, image_topic=specific_topic, image_title=specific_topic)
+            print("Tech post generated and posted with image")
+
+
+
+

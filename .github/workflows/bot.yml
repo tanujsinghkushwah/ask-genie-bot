@@ -30,4 +30,4 @@ jobs:
           BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          python bot.py --task post 
+          python run_bot.py --task post 

@@ -14,7 +14,8 @@ A perplexity-style Twitter bot for tech content that:
 - **AI-Powered Interactions**: Uses Gemini 2.0 Flash model for generating thoughtful, informative responses
 - **Content Generation**: Creates high-quality tech posts with optional images
 - **Mention Responses**: Automatically responds to any mentions of your account
-- **Flexible Scheduling**: Run manually or schedule automated posting and interactions
+- **Modular Architecture**: Clean, maintainable codebase organized by functionality
+- **GitHub Actions Integration**: Automated scheduling via GitHub Actions workflows
 
 ## Setup
 
@@ -63,84 +64,90 @@ This project uses Firebase Remote Config to manage environment variables. Follow
 
 5. Install the requirements: `pip install -r requirements.txt`
 
-Note: The bot will now fetch config values from Firebase Remote Config instead of a .env file.
+Note: The bot will fetch config values from Firebase Remote Config first, then fall back to `.env` file if not found in Remote Config.
+
+## Project Structure
+
+The bot is organized into a modular structure for better maintainability:
+
+```
+src/
+├── __init__.py          # Package initialization
+├── constants.py         # Constants (keywords, defaults)
+├── config.py            # Configuration management (Firebase, env vars)
+├── ai_service.py        # Gemini AI service for responses
+├── image_generator.py   # Image generation (Pollinations API, local fallback)
+├── twitter_client.py    # Twitter API operations
+├── bot.py               # Main bot class orchestrating all services
+└── main.py              # Entry point with task execution logic
+
+run_bot.py               # Root-level entry point
+```
 
 ## Usage
 
 ### Running Manually
 
 Run specific tasks:
-```
+```bash
 # Post a new tech tweet
-python bot.py --task post
+python run_bot.py --task post
 
 # Respond to mentions
-python bot.py --task mentions
+python run_bot.py --task mentions
 
 # Interact with keyword tweets
-python bot.py --task keyword
+python run_bot.py --task keyword
 
 # Run all tasks
-python bot.py --task all
+python run_bot.py --task all
 ```
-
-### Running with Scheduling
-
-To run the bot with predefined schedules:
-```
-python bot.py --schedule
-```
-
-This will:
-- Post tech content at 9 AM and 5 PM
-- Check and respond to mentions every 2 hours
-- Interact with keyword tweets at 11 AM, 3 PM and 7 PM
 
 ## Scheduling with GitHub Actions
 
-You can automate this bot using GitHub Actions. Create a file `.github/workflows/bot.yml` with:
+The bot uses GitHub Actions for automated scheduling. The workflow file `.github/workflows/bot.yml` is already configured. You just need to:
 
-```yaml
-name: Run Twitter Bot
+1. Add your API keys as secrets in your GitHub repository:
+   - Go to Settings → Secrets and variables → Actions
+   - Add the following secrets:
+     - `API_KEY`
+     - `API_KEY_SECRET`
+     - `ACCESS_TOKEN`
+     - `ACCESS_TOKEN_SECRET`
+     - `BEARER_TOKEN`
+     - `GEMINI_API_KEY`
+     - `FIREBASE_SERVICE_ACCOUNT` (JSON content of your Firebase service account key)
 
-on:
-  schedule:
-    - cron: '0 */4 * * *'  # Run every 4 hours
-  workflow_dispatch:  # Allow manual triggers
+2. The workflow will automatically run on the scheduled times defined in the cron expression.
 
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run bot
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          API_KEY_SECRET: ${{ secrets.API_KEY_SECRET }}
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
-          BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python bot.py --task all
-```
+The current workflow configuration:
+- Runs on a cron schedule (configurable in `.github/workflows/bot.yml`)
+- Supports manual triggers via `workflow_dispatch`
+- Executes the bot with the specified task (default: `post`)
 
-Don't forget to add your API keys as secrets in your GitHub repository.
+You can modify the schedule in `.github/workflows/bot.yml` to adjust when the bot runs.
 
 ## Customization
 
-You can modify the following in `bot.py`:
-- Keywords to search for in the `KEYWORDS` list
-- Scheduled times in the `setup_schedule()` function
-- AI prompts in each respective function to change the bot's tone and responses
+### Keywords
+Modify the keywords to search for in `src/constants.py`:
+- Edit the `KEYWORDS` list to add or remove keywords
+
+### AI Prompts
+Customize the bot's tone and responses:
+- **Keyword interactions**: Edit prompts in `src/bot.py` → `interact_with_keyword_tweets()`
+- **Mention responses**: Edit prompts in `src/bot.py` → `respond_to_mentions()`
+- **Tech posts**: Edit prompts in `src/bot.py` → `generate_tech_post()`
+- **Image prompts**: Edit image generation prompts in `src/ai_service.py` → `generate_image_prompt()`
+
+### Model Configuration
+- Change the Gemini model in Firebase Remote Config or `.env` file:
+  - Set `MODEL_NAME` (default: `gemini-2.5-flash`)
+
+### Scheduling
+- Modify the GitHub Actions workflow schedule in `.github/workflows/bot.yml`
+- Change the cron expression to adjust when the bot runs
+- Modify the `--task` parameter to change which task runs on schedule
 
 ## License
 
