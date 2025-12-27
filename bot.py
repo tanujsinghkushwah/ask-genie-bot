@@ -4,6 +4,7 @@ import argparse
 import random
 import base64
 import io
+import urllib.parse
 from datetime import datetime
 import requests
 import firebase_admin
@@ -14,6 +15,10 @@ import google.generativeai as genai
 import schedule
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 # Hardcoded ultimate fallbacks, used if Remote Config is entirely unavailable
 # and get_config_value isn't called with a specific default.
@@ -25,8 +30,7 @@ ULTIMATE_FALLBACK_DEFAULTS = {
     'ACCESS_TOKEN_SECRET': 'YOUR_FALLBACK_ACCESS_TOKEN_SECRET_IN_CODE',
     'GEMINI_API_KEY': 'YOUR_FALLBACK_GEMINI_API_KEY_IN_CODE',
     'BEARER_TOKEN': '',
-    'IMAGE_ROUTER_API': '',
-    'STABLE_HORDE_KEY': ''
+    'MODEL_NAME': 'gemini-2.5-flash'
 }
 
 def initialize_firebase_and_load_config():
@@ -54,7 +58,7 @@ def initialize_firebase_and_load_config():
     return template.evaluate() # Returns a firebase_admin.remote_config.Config object
 
 def get_config_value(evaluated_config, key, default_value=""):
-    """Gets a config value from the evaluated Remote Config object."""
+    """Gets a config value from the evaluated Remote Config object, with fallback to .env file."""
     try:
         # Attempt to get the value as a string, common for env vars
         value = evaluated_config.get_string(key)
@@ -64,11 +68,20 @@ def get_config_value(evaluated_config, key, default_value=""):
     except ValueError:
         # This can happen if the key exists but is not a string (e.g., boolean, number)
         # or, more commonly, if the key is not found (neither remote nor in init_server_template's defaults)
-        # In this case, we rely on the default_value passed to this function.
+        # In this case, check environment variables (.env file) as fallback
+        env_value = os.getenv(key)
+        if env_value:
+            # print(f"Retrieved '{key}' from environment variable: '{env_value}'") # Optional: verbose logging
+            return env_value
         # print(f"Key '{key}' not found as string or not string type in evaluated_config. Using function default: '{default_value}'.") # Optional: verbose logging
         return default_value
     except Exception as e:
-        print(f"Error fetching '{key}' from evaluated_config: {e}. Using function default: '{default_value}'.")
+        print(f"Error fetching '{key}' from evaluated_config: {e}. Checking environment variables...")
+        # Fallback to environment variable
+        env_value = os.getenv(key)
+        if env_value:
+            return env_value
+        print(f"Using function default: '{default_value}'.")
         return default_value
 
 # --- Initialize Firebase and Load Remote Config ONCE at startup ---
@@ -86,11 +99,8 @@ BEARER_TOKEN = get_config_value(evaluated_remote_config, 'BEARER_TOKEN', ULTIMAT
 GEMINI_API_KEY = get_config_value(evaluated_remote_config, 'GEMINI_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_API_KEY'])
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Image Router API 
-IMAGE_ROUTER_API_KEY = get_config_value(evaluated_remote_config, 'IMAGE_ROUTER_API', ULTIMATE_FALLBACK_DEFAULTS['IMAGE_ROUTER_API'])
-
-# Stable Horde API key
-STABLE_HORDE_API_KEY = get_config_value(evaluated_remote_config, 'STABLE_HORDE_KEY', ULTIMATE_FALLBACK_DEFAULTS['STABLE_HORDE_KEY'])
+# Gemini Model Name
+MODEL_NAME = get_config_value(evaluated_remote_config, 'MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['MODEL_NAME'])
 
 # Conversation history for each interaction
 conversation_history = {}
@@ -101,7 +111,7 @@ KEYWORDS = [
     "System Design", "High Level Design", "Low Level Design", 
     "AI", "Blockchain", "Crypto", "Cloud Computing", "DevOps",
     "Microservices", "Database", "Caching", "Operating Systems",
-    "Kubernetes", "Docker", "Machine Learning", "Tech News"
+    "Kubernetes", "Docker", "Machine Learning", "Tech News", "Agentic Systems", "Tech History"
 ]
 
 class GenieTweetBot:
@@ -121,9 +131,8 @@ class GenieTweetBot:
         )
         self.api = tweepy.API(auth)
         
-        # Initialize Gemini model
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
-        self.image_model = genai.GenerativeModel('gemini-1.5-flash')
+        # Initialize Gemini model (model name from config or .env)
+        self.model = genai.GenerativeModel(MODEL_NAME)
         
         # Get own user ID
         try:
@@ -342,48 +351,42 @@ class GenieTweetBot:
             return []
     
     def create_image_with_router_api(self, prompt):
-        """Generate an image using the Image Router API"""
+        """Generate an image using Pollinations.ai API (free, no API key required)"""
         try:
-            print(f"Generating image using Image Router API with prompt: {prompt}")
+            print(f"Generating image using Pollinations.ai with prompt: {prompt}")
             
-            # API endpoint
-            url = "https://ir-api.myqa.cc/v1/openai/images/generations"
+            # Pollinations.ai free API - no API key needed
+            # URL encode the prompt for the URL
+            encoded_prompt = urllib.parse.quote(prompt)
             
-            # Headers
-            headers = {
-                "Authorization": f"Bearer {IMAGE_ROUTER_API_KEY}",
-                "Content-Type": "application/json"
-            }
+            # API endpoint with parameters
+            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
             
-            # Request payload
-            data = {
-                "prompt": prompt,
-                "model": "google/gemini-2.0-flash-exp:free",
-                "quality": "auto"
+            # Parameters for image generation
+            params = {
+                "width": 1200,
+                "height": 630,
+                "seed": random.randint(1000, 9999),
+                "model": "flux",  # Options: flux, stable-diffusion, dreamshaper, etc.
+                "enhance": "true",
+                "private": "false"
             }
             
             # Make the API request
-            print("Sending request to Image Router API...")
-            response = requests.post(url, headers=headers, json=data)
+            print("Sending request to Pollinations.ai...")
+            response = requests.get(url, params=params, stream=True, timeout=60)
             response.raise_for_status()  # Raise exception for non-200 responses
             
-            # Parse the response
-            response_data = response.json()
             print(f"Response received, status: {response.status_code}")
             
-            # Check if we have image data
-            if not response_data.get("data") or not response_data["data"][0].get("b64_json"):
+            # Get image data directly (Pollinations returns image bytes)
+            image_data = response.content
+            
+            if not image_data:
                 print("No image data found in response")
-                # Log the response structure for debugging
-                print(f"Response structure: {response_data.keys()}")
                 raise Exception("No image data in response")
             
-            # Get the base64 image data
-            base64_image = response_data["data"][0]["b64_json"]
-            print(f"Received base64 image data, length: {len(base64_image)}")
-            
-            # Decode the base64 image
-            image_data = base64.b64decode(base64_image)
+            print(f"Received image data, length: {len(image_data)} bytes")
             
             # Create an image buffer
             img_buffer = io.BytesIO(image_data)
@@ -395,15 +398,15 @@ class GenieTweetBot:
             # Save a copy for debugging
             img_buffer.seek(0)
             img = Image.open(img_buffer)
-            img.save("router_api_image.jpg")
-            print(f"Image saved as 'router_api_image.jpg'")
+            img.save("pollinations_image.jpg")
+            print(f"Image saved as 'pollinations_image.jpg'")
             
             # Return the image buffer
             img_buffer.seek(0)
             return img_buffer
             
         except Exception as e:
-            print(f"Error generating image with Router API: {e}")
+            print(f"Error generating image with Pollinations.ai: {e}")
             print("Falling back to local image generation...")
             # Fall back to our local image generation if the API fails
             return self.create_tech_themed_image(prompt, prompt)
