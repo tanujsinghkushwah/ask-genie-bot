@@ -1,0 +1,18 @@
+{
+  "include": [
+    "src",
+    "run_bot.py"
+  ],
+  "exclude": [
+    "venv",
+    "**/__pycache__"
+  ],
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false
+}
+
+
+
+
