@@ -52,8 +52,6 @@ This project uses Firebase Remote Config to manage environment variables. Follow
    - `ACCESS_TOKEN_SECRET` - Twitter Access Token Secret
    - `BEARER_TOKEN` - Twitter Bearer Token (optional)
    - `GEMINI_API_KEY` - Google Gemini API Key
-   - `IMAGE_ROUTER_API` - Image Router API Key (optional)
-   - `STABLE_HORDE_KEY` - Stable Horde API Key (optional)
 
 4. Set up Firebase Admin SDK authentication:
    - For local development:
