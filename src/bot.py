@@ -37,8 +37,8 @@ class GenieTweetBot:
             if not image_title:
                 image_title = image_topic
             
-            # Generate a detailed prompt for the image
-            image_prompt = self.ai_service.generate_image_prompt(image_topic)
+            # Generate a detailed prompt for the image, passing tweet content for better relevance
+            image_prompt = self.ai_service.generate_image_prompt(image_topic, tweet_content=text)
             
             # Use Pollinations API to generate the image
             img_buffer = self.image_generator.create_image_with_pollinations_api(
@@ -171,7 +171,7 @@ class GenieTweetBot:
         # Generate a more specific tech topic based on the base topic
         topic_prompt = f"""
         Based on the general topic '{base_topic}', generate a specific, current tech subtopic 
-        that would be interesting to software engineers and tech professionals in 2024.
+        that would be interesting to software engineers and tech professionals in the current year.
         Your response should be ONLY the specific topic name in 3-5 words, nothing else.
         """
         
@@ -185,21 +185,15 @@ class GenieTweetBot:
         
         # Generate engaging post content
         post_prompt = f"""
-        You're a tech thought leader posting on X (Twitter).
-        
-        Create an insightful, engaging tweet about '{specific_topic}' for software engineers and tech professionals.
-        
-        Your tweet should:
-        - Start with a hook (question, surprising fact, or bold statement)
-        - Include a useful insight or tip
-        - Sound natural and conversational, not formal
-        - End with a thought-provoking point or call to action
-        - Be under 240 characters
-        - NOT use hashtags
-        - NOT mention that you're an AI or bot
-        - NOT use asterisks for emphasis (like *word* or *phrase*)
-        
-        Write it like a real human tech expert would write it - casual, direct, and with personality.
+        You're a tech thought leader posting daily on X about software engineering life.
+
+        Craft a viral tweet on '{specific_topic}' that hooks all software engineers (frontend, backend, full-stack, etc.):
+
+        - Open with bold/contrarian hook on a universal dev pain (e.g., "Everyone chases X, but...")
+        - Drop 1 unexpected insight from real SDE experience (keep <5 sentences, simple words)
+        - End with reply bait: question like "What's your take?" or polarizing takeaway
+        - Under 240 chars, conversational like a human senior staff engineer
+        - No hashtags, no AI mentions, no *emphasis*
         """
         
         post_content = self.ai_service.generate_response(post_prompt)

@@ -36,21 +36,40 @@ class AIService:
             print(f"Error generating AI response: {e}")
             return None
     
-    def generate_image_prompt(self, topic: str) -> str:
-        """Generate a detailed prompt for image creation based on the topic."""
-        prompt = f"""
-        Create a detailed image prompt for a visually captivating tech-related image about '{topic}'. 
-        
-        Your image prompt should:
-        - Be very specific and detailed (at least 50 words)
-        - Include visual elements that would draw attention on social media
-        - Describe lighting, style, mood, and composition
-        - Mention vibrant colors and high contrast elements
-        - Avoid mentioning text or words in the image
-        - Have a modern, professional aesthetic
-        
-        Format your response as a single paragraph with no introductions or explanations.
-        """
+    def generate_image_prompt(self, topic: str, tweet_content: str = None) -> str:
+        """Generate a detailed prompt for image creation based on the topic and tweet content."""
+        if tweet_content:
+            prompt = f"""
+            Create a visually captivating tech image for this software engineering tweet: "{tweet_content}". Topic: '{topic}'.
+
+            Craft a highly detailed prompt (100+ words) for a 16:9 landscape image:
+
+            - Directly visualize tweet's core hook/insight (e.g., shattered chain for "LLM chains", glowing diagram for system design) with metaphorical drama
+            - Modern cyberpunk aesthetic: neon blues/greens on dark backgrounds, high contrast glows, particle effects, floating holographic code snippets or neural connections
+            - Dynamic composition: asymmetric, rule-of-thirds, central focal break (exploding myth, unlocking door, speed lines)
+            - Cinematic lighting: volumetric god rays, rim lighting on tech elements, lens flares for energy
+            - Vibrant accents (electric cyan, fiery orange), professional polish, ultra-detailed 4K
+            - NO text/words/typography anywhere
+            - Single paragraph output, ready for AI image gen
+
+            Make it thumb-stopping for devs scrolling X.
+            """
+        else:
+            prompt = f"""
+            Create a visually captivating tech image for this software engineering topic: '{topic}'.
+
+            Craft a highly detailed prompt (100+ words) for a 16:9 landscape image:
+
+            - Directly visualize tweet's core hook/insight (e.g., shattered chain for "LLM chains", glowing diagram for system design) with metaphorical drama
+            - Modern cyberpunk aesthetic: neon blues/greens on dark backgrounds, high contrast glows, particle effects, floating holographic code snippets or neural connections
+            - Dynamic composition: asymmetric, rule-of-thirds, central focal break (exploding myth, unlocking door, speed lines)
+            - Cinematic lighting: volumetric god rays, rim lighting on tech elements, lens flares for energy
+            - Vibrant accents (electric cyan, fiery orange), professional polish, ultra-detailed 4K
+            - NO text/words/typography anywhere
+            - Single paragraph output, ready for AI image gen
+
+            Make it thumb-stopping for devs scrolling X.
+            """
         
         response = self.model.generate_content(prompt)
         # Limit to 500 characters for image generation API
