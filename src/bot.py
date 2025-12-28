@@ -2,10 +2,10 @@
 
 from typing import Optional
 import random
-from .twitter_client import TwitterClient
-from .ai_service import AIService
-from .image_generator import ImageGenerator
-from .constants import KEYWORDS
+from src.twitter_client import TwitterClient
+from src.ai_service import AIService
+from src.image_generator import ImageGenerator
+from src.constants import KEYWORDS
 
 
 class GenieTweetBot:

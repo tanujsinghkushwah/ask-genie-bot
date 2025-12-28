@@ -1,0 +1,20 @@
+---
+description: Require pytest for all test cases.
+globs: ["tests/**.py"]
+alwaysApply: true
+---
+
+# Pytest Rule
+
+- Use `pytest` for all test cases and test-related code suggestions.
+- Do not use `unittest` or other test libraries.
+- Utilize pytest features such as fixtures and parametrization.
+- Organize tests in the `tests/` directory with descriptive, consistent naming.
+- Example:
+    ```
+    import pytest
+
+    def test_addition():
+        assert 1 + 1 == 2
+    ```
+- Before running the test cases, activate the virtual environment first using `source .venv/bin/activate` and export the PYTHONPATH using `export PYTHONPATH=$PYTHONPATH:$(pwd)/src`.

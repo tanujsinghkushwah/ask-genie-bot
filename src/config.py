@@ -6,7 +6,7 @@ import firebase_admin
 from firebase_admin import credentials, remote_config
 from dotenv import load_dotenv
 
-from .constants import ULTIMATE_FALLBACK_DEFAULTS
+from src.constants import ULTIMATE_FALLBACK_DEFAULTS
 
 # Load environment variables from .env file if it exists
 load_dotenv()
