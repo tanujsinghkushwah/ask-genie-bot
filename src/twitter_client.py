@@ -3,6 +3,7 @@
 from typing import Optional
 import time
 import tweepy
+from .rate_limiter import TwitterRateLimiter
 
 
 class TwitterClient:
@@ -11,6 +12,9 @@ class TwitterClient:
     def __init__(self, api_key: str, api_key_secret: str, access_token: str, 
                  access_token_secret: str, bearer_token: str = None):
         """Initialize Twitter client with credentials."""
+        # Initialize rate limiter
+        self.rate_limiter = TwitterRateLimiter()
+        
         # Initialize Twitter client
         self.client = tweepy.Client(
             bearer_token=bearer_token if bearer_token else None,  # Make bearer token optional
@@ -79,6 +83,14 @@ class TwitterClient:
     
     def post_tweet(self, text: str, media_ids: list = None, max_retries: int = 3, retry_delay: int = 10):
         """Post a tweet with optional media."""
+        # Check rate limits before posting
+        can_post, message = self.rate_limiter.can_post()
+        print(message)
+        
+        if not can_post:
+            print("Skipping post due to rate limit.")
+            return None
+        
         retry_count = 0
         
         while retry_count < max_retries:
@@ -91,10 +103,26 @@ class TwitterClient:
                 else:
                     response = self.client.create_tweet(text=text)
                 
-                print(f"Tweet posted successfully: {response.data['id']}")
-                return response.data['id']
+                tweet_id = response.data['id']
+                print(f"Tweet posted successfully: {tweet_id}")
+                
+                # Record successful post for rate limiting
+                self.rate_limiter.record_post(str(tweet_id))
+                
+                return tweet_id
             except Exception as e:
+                error_str = str(e)
                 retry_count += 1
+                
+                # Check if it's a rate limit error
+                if '429' in error_str or 'Too Many Requests' in error_str:
+                    print(f"⚠️ Rate limit hit from Twitter API!")
+                    print(self.rate_limiter.get_usage_report())
+                    
+                    # On final retry, set lockout to prevent further wasted calls
+                    if retry_count >= max_retries:
+                        self.rate_limiter.set_rate_limit_lockout(lockout_hours=24)
+                
                 if retry_count < max_retries:
                     print(f"Error posting tweet: {e}. Retrying in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
                     time.sleep(retry_delay)
@@ -104,6 +132,14 @@ class TwitterClient:
     
     def reply_to_tweet(self, tweet_id: int, text: str, max_retries: int = 3, retry_delay: int = 10):
         """Reply to a specific tweet."""
+        # Check rate limits before replying
+        can_post, message = self.rate_limiter.can_post()
+        print(message)
+        
+        if not can_post:
+            print("Skipping reply due to rate limit.")
+            return None
+        
         retry_count = 0
         
         while retry_count < max_retries:
@@ -112,10 +148,26 @@ class TwitterClient:
                     text=text,
                     in_reply_to_tweet_id=tweet_id
                 )
-                print(f"Reply posted successfully: {response.data['id']}")
-                return response.data['id']
+                reply_id = response.data['id']
+                print(f"Reply posted successfully: {reply_id}")
+                
+                # Record successful reply for rate limiting
+                self.rate_limiter.record_post(str(reply_id))
+                
+                return reply_id
             except Exception as e:
+                error_str = str(e)
                 retry_count += 1
+                
+                # Check if it's a rate limit error
+                if '429' in error_str or 'Too Many Requests' in error_str:
+                    print(f"⚠️ Rate limit hit from Twitter API!")
+                    print(self.rate_limiter.get_usage_report())
+                    
+                    # On final retry, set lockout to prevent further wasted calls
+                    if retry_count >= max_retries:
+                        self.rate_limiter.set_rate_limit_lockout(lockout_hours=24)
+                
                 if retry_count < max_retries:
                     print(f"Error replying to tweet: {e}. Retrying in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
                     time.sleep(retry_delay)
