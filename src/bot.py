@@ -47,6 +47,16 @@ class GenieTweetBot:
         
         self.image_generator = ImageGenerator()
     
+
+    
+    def check_rate_limits(self) -> bool:
+        """Check if bot interactions are allowed by rate limits."""
+        can_post, message = self.twitter_client.rate_limiter.can_post()
+        if not can_post:
+            print(message)
+            return False
+        return True
+
     def post_tweet(self, text: str, with_image: bool = False, image_topic: Optional[str] = None, image_title: Optional[str] = None):
         """Post a tweet with optional AI-generated image."""
         website_link = "\n\nLearn more at interviewgenie.net"
@@ -85,6 +95,9 @@ class GenieTweetBot:
     
     def interact_with_keyword_tweets(self):
         """Find and interact with tweets containing keywords."""
+        if not self.check_rate_limits():
+            return
+
         print(f"Searching for tweets with keywords...")
         keyword = random.choice(KEYWORDS)
         
@@ -122,6 +135,9 @@ class GenieTweetBot:
     
     def respond_to_mentions(self, since_id: Optional[int] = None):
         """Respond to mentions of the bot."""
+        if not self.check_rate_limits():
+            return since_id
+
         print("Checking for mentions...")
         mentions = self.twitter_client.get_mentions(since_id=since_id)
         
@@ -161,6 +177,9 @@ class GenieTweetBot:
     
     def generate_tech_post(self):
         """Generate and post content about latest tech trends with engaging images."""
+        if not self.check_rate_limits():
+            return
+
         print("Generating tech post...")
         with_image = True
         base_topic = random.choice(KEYWORDS)
