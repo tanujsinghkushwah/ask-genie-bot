@@ -1,0 +1,13 @@
+---
+description: Code generation and file creation rules.
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# Code Generation Rules
+
+- **DO NOT create example_usage.py, example.py, or similar example/demo files** unless explicitly requested by the user.
+- Only make the desired code changes requested by the user.
+- Focus on implementing functionality, not creating demonstration or example code.
+- If examples are needed, include them in documentation or docstrings rather than separate files.
+- **Use absolute/complete module paths for all imports** instead of relative imports (e.g., `from dap_support_agent.app.services.l5_dashboard.module import Class` instead of `from .module import Class`).

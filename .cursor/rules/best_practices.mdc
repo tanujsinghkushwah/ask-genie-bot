@@ -1,0 +1,14 @@
+---
+description: General coding and API best practices.
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# General Best Practices
+
+- Use snake_case for variable and function names.
+- Document all public APIs with clear docstrings.
+- Handle API responses with appropriate HTTP status codes and error messages.
+- Reference important files or directories in rules for context-aware suggestions.
+- Use exponential backoff for API retries.
+- Always include `exc_info=True` in `logger.error()` calls within exception handlers to ensure full stack traces are logged for debugging.

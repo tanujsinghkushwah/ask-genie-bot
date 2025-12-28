@@ -3,7 +3,7 @@
 from typing import Optional
 import time
 import tweepy
-from .rate_limiter import TwitterRateLimiter
+from src.rate_limiter import TwitterRateLimiter
 
 
 class TwitterClient:

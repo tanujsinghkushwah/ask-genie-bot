@@ -1,8 +1,8 @@
-"""Main entry point for the AskMeGenie Twitter Bot."""
+"""AskMeGenie Twitter Bot entry point."""
 
 import argparse
-from .config import load_config
-from .bot import GenieTweetBot
+from src.config import load_config
+from src.bot import GenieTweetBot
 
 
 def run_bot(task=None):

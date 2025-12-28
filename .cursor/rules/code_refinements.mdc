@@ -1,0 +1,13 @@
+---
+description: Code refinement policy for LLM generated code
+globs: ["**/*.py", "**/*.js", "**/*.java", "**/*.ts", "**/*.go"]
+alwaysApply: true
+---
+
+# Code Refinement Policy
+
+- NEVER accept verbose or redundant code without simplification.
+- ALWAYS simplify complex logic and avoid unnecessary abstractions.
+- Use clear, consistent naming and break long functions into smaller parts.
+- Validate inputs, avoid hardcoded secrets, and handle errors securely.
+- Make sure the generated code is scalable and production ready.

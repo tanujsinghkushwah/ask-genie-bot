@@ -1,19 +1,18 @@
-"""Main bot class that orchestrates all bot functionality."""
+"""Main bot class orchestrating Twitter bot functionality."""
 
 from typing import Optional
 import random
-from .twitter_client import TwitterClient
-from .ai_service import AIService
-from .image_generator import ImageGenerator
-from .constants import KEYWORDS
+from src.twitter_client import TwitterClient
+from src.ai_service import AIService
+from src.image_generator import ImageGenerator
+from src.constants import KEYWORDS
 
 
 class GenieTweetBot:
-    """Main bot class for AskMeGenie Twitter bot."""
+    """AskMeGenie Twitter bot with AI-powered content generation."""
     
     def __init__(self, config: dict):
-        """Initialize the bot with configuration."""
-        # Initialize services
+        """Initialize bot with configuration."""
         self.twitter_client = TwitterClient(
             api_key=config['API_KEY'],
             api_key_secret=config['API_KEY_SECRET'],
@@ -21,14 +20,12 @@ class GenieTweetBot:
             access_token_secret=config['ACCESS_TOKEN_SECRET'],
             bearer_token=config['BEARER_TOKEN']
         )
-        
-        # Determine which provider to use and set up API keys
+
         provider = config.get('AI_PROVIDER', 'groq').lower()
         
         if provider == 'groq':
             api_key = str(config.get('GROQ_API_KEY', ''))
             model_name = str(config.get('GROQ_MODEL_NAME', 'llama-3.1-8b-instant'))
-            # Use Gemini as fallback if available
             gemini_key = config.get('GEMINI_API_KEY')
             gemini_model = config.get('GEMINI_MODEL_NAME') or config.get('MODEL_NAME', 'gemini-2.5-flash')
             fallback_api_key = str(gemini_key) if gemini_key else None
@@ -50,9 +47,18 @@ class GenieTweetBot:
         
         self.image_generator = ImageGenerator()
     
+
+    
+    def check_rate_limits(self) -> bool:
+        """Check if bot interactions are allowed by rate limits."""
+        can_post, message = self.twitter_client.rate_limiter.can_post()
+        if not can_post:
+            print(message)
+            return False
+        return True
+
     def post_tweet(self, text: str, with_image: bool = False, image_topic: Optional[str] = None, image_title: Optional[str] = None):
-        """Post a tweet with optional image."""
-        # Add interviewgenie.net link at the end of the tweet
+        """Post a tweet with optional AI-generated image."""
         website_link = "\n\nLearn more at interviewgenie.net"
         tweet_text = text + website_link
         
@@ -62,58 +68,45 @@ class GenieTweetBot:
             
             if not image_title:
                 image_title = image_topic
-            
-            # Generate a detailed prompt for the image, passing tweet content for better relevance
             image_prompt = self.ai_service.generate_image_prompt(image_topic, tweet_content=text)
             
             if not image_prompt:
                 print("Image prompt generation failed, posting text-only tweet")
                 return self.twitter_client.post_tweet(tweet_text)
-            
-            # Use Pollinations API to generate the image
+
             img_buffer = self.image_generator.create_image_with_pollinations_api(
                 image_prompt,
                 fallback_generator=self.image_generator.create_tech_themed_image
             )
             
             if img_buffer:
-                # Upload media
                 print("Uploading image to Twitter...")
                 media_id = self.twitter_client.upload_media(img_buffer)
-                
                 if media_id:
-                    # Post tweet with media
-                    print("Posting tweet with image...")
                     return self.twitter_client.post_tweet(tweet_text, media_ids=[media_id])
                 else:
-                    # Fallback to text-only tweet
                     print("Media upload failed, posting text-only tweet")
                     return self.twitter_client.post_tweet(tweet_text)
             else:
-                # Fallback to text-only tweet
                 print("Image generation failed, posting text-only tweet")
                 return self.twitter_client.post_tweet(tweet_text)
         else:
-            # Text-only tweet
             return self.twitter_client.post_tweet(tweet_text)
     
     def interact_with_keyword_tweets(self):
         """Find and interact with tweets containing keywords."""
+        if not self.check_rate_limits():
+            return
+
         print(f"Searching for tweets with keywords...")
-        
-        # Select random keyword to search for
         keyword = random.choice(KEYWORDS)
         
-        # Get tweets containing the keyword
         tweets = self.twitter_client.search_tweets(keyword, max_results=5)
         
         if not tweets:
             return
-        
-        # Select a random tweet to interact with
         tweet = random.choice(tweets)
-        
-        # Generate a response
+
         original_tweet = self.twitter_client.get_tweet(tweet.id)
         if not original_tweet:
             return
@@ -137,15 +130,15 @@ class GenieTweetBot:
         response = self.ai_service.generate_response(prompt, conversation_id=str(tweet.id))
         
         if response:
-            # Reply to the tweet
             self.twitter_client.reply_to_tweet(tweet.id, response)
             print(f"Interacted with tweet: {tweet.id}")
     
     def respond_to_mentions(self, since_id: Optional[int] = None):
         """Respond to mentions of the bot."""
+        if not self.check_rate_limits():
+            return since_id
+
         print("Checking for mentions...")
-        
-        # Get mentions
         mentions = self.twitter_client.get_mentions(since_id=since_id)
         
         if not mentions:
@@ -156,15 +149,11 @@ class GenieTweetBot:
         for mention in mentions:
             if newest_id is None or mention.id > newest_id:
                 newest_id = mention.id
-            
-            # Get the tweet text
             tweet = self.twitter_client.get_tweet(mention.id)
             if not tweet:
                 continue
             
             tweet_text = tweet.text
-            
-            # Generate response
             prompt = f"""
             You are AskMeGenie, a helpful AI assistant specializing in software engineering, tech trends, and career advice.
             
@@ -180,9 +169,7 @@ class GenieTweetBot:
             """
             
             response = self.ai_service.generate_response(prompt, conversation_id=str(mention.id))
-            
             if response:
-                # Reply to the mention
                 self.twitter_client.reply_to_tweet(mention.id, response)
                 print(f"Responded to mention: {mention.id}")
         
@@ -190,15 +177,13 @@ class GenieTweetBot:
     
     def generate_tech_post(self):
         """Generate and post content about latest tech trends with engaging images."""
+        if not self.check_rate_limits():
+            return
+
         print("Generating tech post...")
-        
-        # Always include an image for better engagement
         with_image = True
-        
-        # Select a random tech topic from keywords or generate a novel one
         base_topic = random.choice(KEYWORDS)
-        
-        # Generate a more specific tech topic based on the base topic
+
         topic_prompt = f"""
         Based on the general topic '{base_topic}', generate a specific, current tech subtopic 
         that would be interesting to software engineers and tech professionals in the current year.
@@ -208,12 +193,9 @@ class GenieTweetBot:
         specific_topic = self.ai_service.generate_response(topic_prompt)
         if not specific_topic:
             specific_topic = base_topic
-            
-        # Trim any extra whitespace or punctuation
         specific_topic = specific_topic.strip().strip('"\'.,;:')
         print(f"Selected specific tech topic: {specific_topic}")
-        
-        # Generate engaging post content
+
         post_prompt = f"""
         You're a tech thought leader posting daily on X about software engineering life.
 
@@ -229,7 +211,6 @@ class GenieTweetBot:
         post_content = self.ai_service.generate_response(post_prompt)
         
         if post_content:
-            # Post the tweet with an image
             self.post_tweet(post_content, with_image=with_image, image_topic=specific_topic, image_title=specific_topic)
             print("Tech post generated and posted with image")
 

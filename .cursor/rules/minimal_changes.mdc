@@ -1,0 +1,13 @@
+---
+description: Enforce minimal, targeted code and test changes.
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# Minimal Code Change Rule
+
+- When editing code or tests, make only the minimal required changes to achieve the intended functionality.
+- Do not reformat or rewrite unrelated code sections.
+- Preserve existing code style, structure, and comments unless explicitly instructed otherwise.
+- Prefer inline suggestions and focused edits over full-file rewrites.
+- Always activate .venv before running any command
