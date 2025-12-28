@@ -1,0 +1,45 @@
+---
+alwaysApply: true
+description: Enforce minimal commenting style - write self-documenting code with only essential comments
+globs:
+  - "**/*.py"
+  - "src/**/*.py"
+  - "tests/**/*.py"
+---
+
+# Minimal Comments
+Write self-documenting code. Add comments only when they provide non-obvious value.
+
+## Guidelines
+- Docstrings: 1 line describing purpose only
+- Inline comments: Only for non-obvious logic or "why" (never "what")
+- Never state the obvious (e.g., "retry on failure", "initialize variable")
+- Let clear names and structure replace explanatory comments
+
+## Examples
+
+✓ GOOD:
+```python
+workflow.add_node(
+    "generate",
+    generate_code_node,
+    retry_policy=RetryPolicy(max_attempts=2)
+)
+
+def calculate_discount(price: float, tier: str) -> float:
+    if tier == "premium":
+        return price * 0.8
+```
+
+✗ BAD:
+```python
+workflow.add_node(
+    "generate",
+    generate_code_node,
+    retry_policy=RetryPolicy(max_attempts=2)  # Retry node on unexpected failures
+)
+
+def calculate_discount(price: float, tier: str) -> float:
+    if tier == "premium":
+        return price * 0.8  # Apply 20% discount for premium tier
+```

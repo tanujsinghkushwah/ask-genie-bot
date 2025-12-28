@@ -1,4 +1,4 @@
-"""Configuration management for Firebase Remote Config and environment variables."""
+"""Configuration management using Firebase Remote Config and environment variables."""
 
 import os
 import asyncio
@@ -8,12 +8,11 @@ from dotenv import load_dotenv
 
 from src.constants import ULTIMATE_FALLBACK_DEFAULTS
 
-# Load environment variables from .env file if it exists
 load_dotenv()
 
 
 def initialize_firebase_and_load_config():
-    """Initializes Firebase app and loads Remote Config template."""
+    """Initialize Firebase and load Remote Config template."""
     try:
         firebase_admin.get_app()
     except ValueError:
@@ -21,42 +20,29 @@ def initialize_firebase_and_load_config():
         firebase_admin.initialize_app(cred)
     
     print("Initializing Remote Config server template...")
-    # Initialize with ultimate fallbacks. Remote values will override these.
     template = remote_config.init_server_template(default_config=ULTIMATE_FALLBACK_DEFAULTS)
     
     print("Loading Remote Config template from Firebase backend...")
     try:
-        asyncio.run(template.load())  # Fetches the template and merges with defaults
+        asyncio.run(template.load())
         print("Remote Config template loaded successfully.")
     except Exception as e:
         print(f"ERROR loading Remote Config template from backend: {e}")
-        print("Proceeding with ULTIMATE_FALLBACK_DEFAULTS or specific get_config_value defaults.")
-        # If load fails, template still contains ULTIMATE_FALLBACK_DEFAULTS
+        print("Proceeding with ULTIMATE_FALLBACK_DEFAULTS.")
 
     print("Evaluating Remote Config template...")
     return template.evaluate()  # Returns a firebase_admin.remote_config.Config object
 
 
 def get_config_value(evaluated_config, key, default_value=""):
-    """Gets a config value, prioritizing .env file over Remote Config for sensitive keys."""
-    # PRIORITY 1: Check environment variables (.env file) first
-    # This allows local development to override Remote Config values
+    """Get config value prioritizing environment variables over Remote Config."""
     env_value = os.getenv(key)
     if env_value:
-        # print(f"Retrieved '{key}' from environment variable") # Optional: verbose logging
         return env_value
-    
-    # PRIORITY 2: Try Remote Config
     try:
-        # Attempt to get the value as a string, common for env vars
         value = evaluated_config.get_string(key)
-        source = evaluated_config.get_value_source(key)
-        # print(f"Retrieved '{key}' from Remote Config (Source: {source})") # Optional: verbose logging
         return value
     except ValueError:
-        # This can happen if the key exists but is not a string (e.g., boolean, number)
-        # or, more commonly, if the key is not found
-        # print(f"Key '{key}' not found in Remote Config. Using function default: '{default_value}'.") # Optional: verbose logging
         return default_value
     except Exception as e:
         print(f"Error fetching '{key}' from evaluated_config: {e}.")
@@ -66,23 +52,18 @@ def get_config_value(evaluated_config, key, default_value=""):
 
 def load_config():
     """Load and return all configuration values."""
-    # Initialize Firebase and Load Remote Config ONCE at startup
     evaluated_remote_config = initialize_firebase_and_load_config()
-    
-    # Twitter API credentials
     config = {
         'API_KEY': get_config_value(evaluated_remote_config, 'API_KEY', ULTIMATE_FALLBACK_DEFAULTS['API_KEY']),
         'API_KEY_SECRET': get_config_value(evaluated_remote_config, 'API_KEY_SECRET', ULTIMATE_FALLBACK_DEFAULTS['API_KEY_SECRET']),
         'ACCESS_TOKEN': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN']),
         'ACCESS_TOKEN_SECRET': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN_SECRET', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN_SECRET']),
         'BEARER_TOKEN': get_config_value(evaluated_remote_config, 'BEARER_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['BEARER_TOKEN']),
-        # AI Provider settings
         'AI_PROVIDER': get_config_value(evaluated_remote_config, 'AI_PROVIDER', ULTIMATE_FALLBACK_DEFAULTS['AI_PROVIDER']),
         'GROQ_API_KEY': get_config_value(evaluated_remote_config, 'GROQ_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GROQ_API_KEY']),
         'GROQ_MODEL_NAME': get_config_value(evaluated_remote_config, 'GROQ_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GROQ_MODEL_NAME']),
         'GEMINI_API_KEY': get_config_value(evaluated_remote_config, 'GEMINI_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_API_KEY']),
         'GEMINI_MODEL_NAME': get_config_value(evaluated_remote_config, 'GEMINI_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_MODEL_NAME']),
-        # Legacy support
         'MODEL_NAME': get_config_value(evaluated_remote_config, 'MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['MODEL_NAME']),
     }
     
