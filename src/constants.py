@@ -17,7 +17,9 @@ ULTIMATE_FALLBACK_DEFAULTS = {
     'GROQ_MODEL_NAME': 'llama-3.1-8b-instant',
     'GEMINI_API_KEY': 'YOUR_FALLBACK_GEMINI_API_KEY_IN_CODE',
     'GEMINI_MODEL_NAME': 'gemini-2.5-flash',
+    'OPENROUTER_API_KEY': '',
     'BEARER_TOKEN': '',
+    'IMAGE_MODEL': 'bytedance-seed/seedream-4.5',
     'MODEL_NAME': 'gemini-2.5-flash'
 }
 

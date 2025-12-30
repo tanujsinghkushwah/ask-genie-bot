@@ -45,7 +45,10 @@ class GenieTweetBot:
             fallback_model=fallback_model
         )
         
-        self.image_generator = ImageGenerator()
+        self.image_generator = ImageGenerator(
+            api_key=config.get('OPENROUTER_API_KEY'),
+            model_name=config.get('IMAGE_MODEL')
+        )
     
 
     
@@ -74,7 +77,7 @@ class GenieTweetBot:
                 print("Image prompt generation failed, posting text-only tweet")
                 return self.twitter_client.post_tweet(tweet_text)
 
-            img_buffer = self.image_generator.create_image_with_pollinations_api(
+            img_buffer = self.image_generator.generate_image(
                 image_prompt,
                 fallback_generator=self.image_generator.create_tech_themed_image
             )
