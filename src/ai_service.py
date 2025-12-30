@@ -1,12 +1,15 @@
-"""AI service for Groq and Gemini LLM providers."""
+"""AI service using LiteLLM for unified API interactions."""
 
-from typing import Optional
-import google.generativeai as genai
-from groq import Groq
+import os
+from typing import Optional, List, Dict
+from litellm import completion
+import litellm
 
+# Suppress litellm logging if too verbose
+litellm.suppress_instrumentation = True
 
 class AIService:
-    """Multi-provider AI service with fallback support."""
+    """Multi-provider AI service using LiteLLM with fallback support."""
     
     def __init__(self, provider: str, api_key: str, model_name: str, fallback_api_key: Optional[str] = None, fallback_model: Optional[str] = None):
         """Initialize with provider credentials and optional fallback."""
@@ -14,87 +17,67 @@ class AIService:
         self.api_key = api_key
         self.model_name = model_name
         self.fallback_api_key = fallback_api_key
-        self.fallback_model = fallback_model
-        self.conversation_history = {}
+        self.fallback_model_name = fallback_model
+        self.conversation_history: Dict[str, List[Dict[str, str]]] = {}
         
-        if self.provider == 'groq':
-            self.client = Groq(api_key=api_key)
-            self.gemini_model = None
-        elif self.provider == 'gemini':
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel(model_name)
-            self.client = None
-        else:
-            raise ValueError(f"Unsupported provider: {provider}. Use 'groq' or 'gemini'.")
-    
+    def _get_model_string(self, provider: str, model: str) -> str:
+        """Format model string for LiteLLM (e.g., 'groq/llama3')."""
+        if "/" in model:
+            return model
+        # Simplify provider mapping
+        if provider == 'groq':
+            return f"groq/{model}"
+        elif provider == 'gemini':
+            return f"gemini/{model}"
+        return model
+
     def generate_response(self, prompt: str, conversation_id: Optional[str] = None) -> Optional[str]:
         """Generate AI response with automatic fallback on failure."""
+        
+        messages = []
+        if conversation_id and conversation_id in self.conversation_history:
+            # We copy history to avoid mutating it until success if we were using a different approach,
+            # but standard practice is to use valid history.
+            messages = list(self.conversation_history[conversation_id])
+        
+        current_messages = messages + [{"role": "user", "content": prompt}]
+        
+        primary_model = self._get_model_string(self.provider, self.model_name)
+        
         try:
-            if self.provider == 'groq':
-                return self._generate_groq_response(prompt, conversation_id)
-            else:
-                return self._generate_gemini_response(prompt, conversation_id)
+            response = completion(
+                model=primary_model,
+                messages=current_messages,
+                api_key=self.api_key
+            )
+            response_text = response.choices[0].message.content
+            
+            if conversation_id:
+                current_messages.append({"role": "assistant", "content": response_text})
+                self.conversation_history[conversation_id] = current_messages
+                
+            return response_text
+            
         except Exception as e:
-            print(f"Error generating AI response with {self.provider}: {e}")
-            if self.fallback_api_key and self.fallback_model and self.provider != 'gemini':
+            print(f"Error generating AI response with {primary_model}: {e}")
+            
+            # Fallback logic
+            if self.fallback_api_key and self.fallback_model_name and self.provider != 'gemini':
                 print(f"Attempting fallback to Gemini...")
                 try:
-                    return self._generate_gemini_fallback(prompt, conversation_id)
+                    # Assuming fallback is Gemini based on previous implementation
+                    fallback_model_str = self._get_model_string('gemini', self.fallback_model_name)
+                    
+                    response = completion(
+                        model=fallback_model_str,
+                        messages=current_messages,
+                        api_key=self.fallback_api_key
+                    )
+                    return response.choices[0].message.content
                 except Exception as fallback_error:
                     print(f"Fallback also failed: {fallback_error}")
             return None
-    
-    def _generate_groq_response(self, prompt: str, conversation_id: Optional[str] = None) -> str:
-        """Generate response using Groq API."""
-        messages = []
-        
-        if conversation_id and conversation_id in self.conversation_history:
-            messages = self.conversation_history[conversation_id]
-        
-        messages.append({"role": "user", "content": prompt})
-        
-        if self.client is None:
-            raise ValueError("Groq client not initialized")
-        chat_completion = self.client.chat.completions.create(
-            messages=messages,
-            model=self.model_name,
-        )
-        
-        response_text = chat_completion.choices[0].message.content
-        
-        if conversation_id:
-            messages.append({"role": "assistant", "content": response_text})
-            self.conversation_history[conversation_id] = messages
-        
-        return response_text
-    
-    def _generate_gemini_response(self, prompt: str, conversation_id: Optional[str] = None) -> str:
-        """Generate response using Gemini API."""
-        if conversation_id and conversation_id in self.conversation_history:
-            history = self.conversation_history[conversation_id]
-            history.append({"role": "user", "parts": [prompt]})
-            chat = self.model.start_chat(history=history)
-            response = chat.send_message(prompt)
-        else:
-            response = self.model.generate_content(prompt)
-            if conversation_id:
-                self.conversation_history[conversation_id] = [
-                    {"role": "user", "parts": [prompt]},
-                    {"role": "model", "parts": [response.text]}
-                ]
-        
-        return response.text
-    
-    def _generate_gemini_fallback(self, prompt: str, conversation_id: Optional[str] = None) -> str:
-        """Generate response using Gemini as fallback."""
-        if not self.fallback_api_key or not self.fallback_model:
-            raise ValueError("Fallback API key or model not configured")
-        genai.configure(api_key=self.fallback_api_key)
-        fallback_model = genai.GenerativeModel(self.fallback_model)
-        
-        response = fallback_model.generate_content(prompt)
-        return response.text
-    
+
     def generate_image_prompt(self, topic: str, tweet_content: Optional[str] = None) -> Optional[str]:
         """Generate a detailed image creation prompt from topic and tweet content."""
         if tweet_content:
@@ -136,11 +119,5 @@ class AIService:
             return None
         
         image_prompt = response_text.strip()[:500]
-
-        
         print(f"Generated image prompt: {image_prompt}")
         return image_prompt
-
-
-
-

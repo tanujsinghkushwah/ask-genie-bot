@@ -2,20 +2,25 @@
 
 import io
 import random
-import urllib.parse
 import requests
+import json
+import base64
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
-
 class ImageGenerator:
-    """Image generation using Pollinations API with local fallback."""
+    """Image generation using OpenRouter (multimodal chat) with local fallback."""
     
-    @staticmethod
-    def create_tech_themed_image(topic: str, title: str) -> io.BytesIO:
-        """Generate a tech-themed image with gradient background and network nodes."""
+    def __init__(self, api_key: str = None, model_name: str = "bytedance-seed/seedream-4.5"):
+        """Initialize with API key."""
+        self.api_key = api_key
+        # Model for OpenRouter that supports image generation via chat completions
+        self.model = model_name
+    
+    def create_tech_themed_image(self, topic: str, title: str) -> io.BytesIO:
+        """Generate a tech-themed image locally using Pillow (fallback)."""
         try:
-            print(f"Creating tech-themed image for: {topic}")
+            print(f"Creating local tech-themed image for: {topic}")
             width, height = 1200, 630
             image = Image.new('RGB', (width, height), color='white')
             draw = ImageDraw.Draw(image)
@@ -86,74 +91,96 @@ class ImageGenerator:
 
             image_path = "generated_image.jpg"
             image.save(image_path)
-            print(f"Image saved to {image_path}")
-
+            
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
             return img_buffer
             
         except Exception as e:
-            print(f"Error creating tech-themed image: {e}")
+            print(f"Error creating local image: {e}")
             image = Image.new('RGB', (800, 500), color=(20, 40, 80))
-            draw = ImageDraw.Draw(image)
-            draw.rectangle((10, 10, 790, 490), outline=(255, 255, 255), width=5)
             
             img_buffer = io.BytesIO()
             image.save(img_buffer, format='JPEG')
             img_buffer.seek(0)
             return img_buffer
     
-    @staticmethod
-    def create_image_with_pollinations_api(prompt: str, fallback_generator=None) -> io.BytesIO:
-        """Generate image using Pollinations.ai API with local fallback."""
+    def generate_image(self, prompt: str, fallback_generator=None) -> io.BytesIO:
+        """Generate image using OpenRouter multimodal chat completion with fallback."""
         try:
-            print(f"Generating image using Pollinations.ai with prompt: {prompt}")
-            encoded_prompt = urllib.parse.quote(prompt)
-            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
-            params = {
-                "width": 1200,
-                "height": 630,
-                "seed": random.randint(1000, 9999),
-                "model": "flux",  # Options: flux, stable-diffusion, dreamshaper, etc.
-                "enhance": "true",
-                "private": "false"
-            }
+            print(f"Generating image using OpenRouter ({self.model}) with prompt: {prompt[:50]}...")
+            
+            if not self.api_key:
+                raise ValueError("No OpenRouter API key provided")
 
-            print("Sending request to Pollinations.ai...")
-            response = requests.get(url, params=params, stream=True, timeout=60)
-            response.raise_for_status()  # Raise exception for non-200 responses
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/tanujsinghkushwah/ask-genie-bot", 
+                },
+                data=json.dumps({
+                    "model": self.model,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "modalities": ["image", "text"]
+                }),
+                timeout=60
+            )
             
-            print(f"Response received, status: {response.status_code}")
+            response.raise_for_status()
+            result = response.json()
+            
+            image_url = None
+            if result.get("choices"):
+                message = result["choices"][0]["message"]
+                if message.get("images"):
+                    for image in message["images"]:
+                        image_url = image["image_url"]["url"]
+                        # break after first image
+                        break
+            
+            if not image_url:
+                raise ValueError("No image URL found in OpenRouter response")
 
-            image_data = response.content
+            print(f"Image found in response.")
             
-            if not image_data:
-                print("No image data found in response")
-                raise Exception("No image data in response")
-            
-            print(f"Received image data, length: {len(image_data)} bytes")
+            # Handle Base64 Data URL (data:image/png;base64,...)
+            if image_url.startswith("data:image"):
+                # Extract the base64 part
+                header, encoded = image_url.split(",", 1)
+                image_data = base64.b64decode(encoded)
+            else:
+                # Handle standard URL
+                print("Downloading image from URL...")
+                image_response = requests.get(image_url, timeout=30)
+                image_response.raise_for_status()
+                image_data = image_response.content
 
             img_buffer = io.BytesIO(image_data)
+            
+            # Verify image
             img = Image.open(img_buffer)
             img.verify()
-
+            
             img_buffer.seek(0)
             img = Image.open(img_buffer)
-            img.save("pollinations_image.jpg")
-            print(f"Image saved as 'pollinations_image.jpg'")
-
+            img.save("generated_image.jpg")
+            print("Image saved to 'generated_image.jpg'")
+            
             img_buffer.seek(0)
             return img_buffer
-            
+
         except Exception as e:
-            print(f"Error generating image with Pollinations.ai: {e}")
+            print(f"Error generating image with OpenRouter: {e}")
             print("Falling back to local image generation...")
             if fallback_generator:
-                return fallback_generator(prompt, prompt)
+                return fallback_generator(prompt, prompt[:30])
             else:
-                return ImageGenerator.create_tech_themed_image(prompt, prompt)
-
-
-
-
+                return self.create_tech_themed_image(prompt, prompt[:30])

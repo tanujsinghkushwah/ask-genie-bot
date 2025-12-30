@@ -64,6 +64,8 @@ def load_config():
         'GROQ_MODEL_NAME': get_config_value(evaluated_remote_config, 'GROQ_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GROQ_MODEL_NAME']),
         'GEMINI_API_KEY': get_config_value(evaluated_remote_config, 'GEMINI_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_API_KEY']),
         'GEMINI_MODEL_NAME': get_config_value(evaluated_remote_config, 'GEMINI_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_MODEL_NAME']),
+        'OPENROUTER_API_KEY': get_config_value(evaluated_remote_config, 'OPENROUTER_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['OPENROUTER_API_KEY']),
+        'IMAGE_MODEL': get_config_value(evaluated_remote_config, 'IMAGE_MODEL', ULTIMATE_FALLBACK_DEFAULTS['IMAGE_MODEL']),
         'MODEL_NAME': get_config_value(evaluated_remote_config, 'MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['MODEL_NAME']),
     }
     
