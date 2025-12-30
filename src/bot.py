@@ -21,29 +21,14 @@ class GenieTweetBot:
             bearer_token=config['BEARER_TOKEN']
         )
 
-        provider = config.get('AI_PROVIDER', 'groq').lower()
-        
-        if provider == 'groq':
-            api_key = str(config.get('GROQ_API_KEY', ''))
-            model_name = str(config.get('GROQ_MODEL_NAME', 'llama-3.1-8b-instant'))
-            gemini_key = config.get('GEMINI_API_KEY')
-            gemini_model = config.get('GEMINI_MODEL_NAME') or config.get('MODEL_NAME', 'gemini-2.5-flash')
-            fallback_api_key = str(gemini_key) if gemini_key else None
-            fallback_model = str(gemini_model) if gemini_model else None
-        else:  # gemini
-            gemini_key = config.get('GEMINI_API_KEY') or config.get('MODEL_NAME', '')
-            api_key = str(gemini_key) if gemini_key else ''
-            model_name = str(config.get('GEMINI_MODEL_NAME') or config.get('MODEL_NAME', 'gemini-2.5-flash') or 'gemini-2.5-flash')
-            fallback_api_key = None
-            fallback_model = None
-        
+        # Use OpenRouter with CONTENT_MODEL
         self.ai_service = AIService(
-            provider=provider,
-            api_key=api_key,
-            model_name=model_name,
-            fallback_api_key=fallback_api_key,
-            fallback_model=fallback_model
+            provider='openrouter',
+            api_key=str(config.get('OPENROUTER_API_KEY', '')),
+            model_name=str(config.get('CONTENT_MODEL', 'qwen/qwen3-coder:free'))
         )
+        
+
         
         self.image_generator = ImageGenerator(
             api_key=config.get('OPENROUTER_API_KEY'),

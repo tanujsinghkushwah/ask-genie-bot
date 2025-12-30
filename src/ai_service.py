@@ -21,14 +21,18 @@ class AIService:
         self.conversation_history: Dict[str, List[Dict[str, str]]] = {}
         
     def _get_model_string(self, provider: str, model: str) -> str:
-        """Format model string for LiteLLM (e.g., 'groq/llama3')."""
+        """Format model string for LiteLLM (e.g., 'openrouter/model')."""
+        # If model starts with provider prefix, accept it as is
+        if model.startswith(f"{provider}/"):
+            return model
+            
+        if provider == 'openrouter':
+            return f"openrouter/{model}"
+            
+        # For other cases/providers, if slash exists, assume it's fully qualified
         if "/" in model:
             return model
-        # Simplify provider mapping
-        if provider == 'groq':
-            return f"groq/{model}"
-        elif provider == 'gemini':
-            return f"gemini/{model}"
+            
         return model
 
     def generate_response(self, prompt: str, conversation_id: Optional[str] = None) -> Optional[str]:
@@ -61,13 +65,19 @@ class AIService:
         except Exception as e:
             print(f"Error generating AI response with {primary_model}: {e}")
             
-            # Fallback logic
-            if self.fallback_api_key and self.fallback_model_name and self.provider != 'gemini':
-                print(f"Attempting fallback to Gemini...")
+        except Exception as e:
+            print(f"Error generating AI response with {primary_model}: {e}")
+            
+            # Fallback logic (generic)
+            if self.fallback_api_key and self.fallback_model_name:
+                print(f"Attempting fallback...")
                 try:
-                    # Assuming fallback is Gemini based on previous implementation
-                    fallback_model_str = self._get_model_string('gemini', self.fallback_model_name)
-                    
+                    fallback_model_str = self.fallback_model_name
+                    if "/" not in fallback_model_str:
+                         # Assume same provider or simplistic fallback if not fully qualified, 
+                         # but ideally fallback model should be fully qualified or handled by provider logic
+                         pass 
+
                     response = completion(
                         model=fallback_model_str,
                         messages=current_messages,
