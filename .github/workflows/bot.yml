@@ -29,5 +29,7 @@ jobs:
           ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
           BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          IMAGE_MODEL: ${{ secrets.IMAGE_MODEL }}
+          CONTENT_MODEL: ${{ secrets.CONTENT_MODEL }}
         run: |
           python run_bot.py --task post 
