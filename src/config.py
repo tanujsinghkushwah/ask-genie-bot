@@ -59,14 +59,9 @@ def load_config():
         'ACCESS_TOKEN': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN']),
         'ACCESS_TOKEN_SECRET': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN_SECRET', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN_SECRET']),
         'BEARER_TOKEN': get_config_value(evaluated_remote_config, 'BEARER_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['BEARER_TOKEN']),
-        'AI_PROVIDER': get_config_value(evaluated_remote_config, 'AI_PROVIDER', ULTIMATE_FALLBACK_DEFAULTS['AI_PROVIDER']),
-        'GROQ_API_KEY': get_config_value(evaluated_remote_config, 'GROQ_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GROQ_API_KEY']),
-        'GROQ_MODEL_NAME': get_config_value(evaluated_remote_config, 'GROQ_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GROQ_MODEL_NAME']),
-        'GEMINI_API_KEY': get_config_value(evaluated_remote_config, 'GEMINI_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_API_KEY']),
-        'GEMINI_MODEL_NAME': get_config_value(evaluated_remote_config, 'GEMINI_MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['GEMINI_MODEL_NAME']),
         'OPENROUTER_API_KEY': get_config_value(evaluated_remote_config, 'OPENROUTER_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['OPENROUTER_API_KEY']),
         'IMAGE_MODEL': get_config_value(evaluated_remote_config, 'IMAGE_MODEL', ULTIMATE_FALLBACK_DEFAULTS['IMAGE_MODEL']),
-        'MODEL_NAME': get_config_value(evaluated_remote_config, 'MODEL_NAME', ULTIMATE_FALLBACK_DEFAULTS['MODEL_NAME']),
+        'CONTENT_MODEL': get_config_value(evaluated_remote_config, 'CONTENT_MODEL', ULTIMATE_FALLBACK_DEFAULTS['CONTENT_MODEL']),
     }
     
     return config

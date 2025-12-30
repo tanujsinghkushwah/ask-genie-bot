@@ -12,15 +12,10 @@ ULTIMATE_FALLBACK_DEFAULTS = {
     'API_KEY_SECRET': 'YOUR_FALLBACK_API_KEY_SECRET_IN_CODE',
     'ACCESS_TOKEN': 'YOUR_FALLBACK_ACCESS_TOKEN_IN_CODE',
     'ACCESS_TOKEN_SECRET': 'YOUR_FALLBACK_ACCESS_TOKEN_SECRET_IN_CODE',
-    'AI_PROVIDER': 'groq',  # 'groq' or 'gemini'
-    'GROQ_API_KEY': 'YOUR_FALLBACK_GROQ_API_KEY_IN_CODE',
-    'GROQ_MODEL_NAME': 'llama-3.1-8b-instant',
-    'GEMINI_API_KEY': 'YOUR_FALLBACK_GEMINI_API_KEY_IN_CODE',
-    'GEMINI_MODEL_NAME': 'gemini-2.5-flash',
     'OPENROUTER_API_KEY': '',
     'BEARER_TOKEN': '',
     'IMAGE_MODEL': 'bytedance-seed/seedream-4.5',
-    'MODEL_NAME': 'gemini-2.5-flash'
+    'CONTENT_MODEL': 'qwen/qwen3-coder:free'
 }
 
 
