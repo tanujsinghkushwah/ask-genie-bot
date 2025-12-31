@@ -11,7 +11,7 @@ A perplexity-style Twitter bot for tech content that:
 ## Features
 
 - **Keyword Monitoring**: Automatically searches for tweets containing specific keywords (Interview, Software Engineer, Leetcode, System Design, etc.)
-- **AI-Powered Interactions**: Uses **OpenRouter** (default: `qwen/qwen3-coder:free`) for text generation and intelligent responses.
+- **AI-Powered Interactions**: Uses **Hugging Face** (default: `Qwen/Qwen3-Coder-30B-A3B-Instruct`) for text generation and intelligent responses.
 - **Content Generation**: Creates high-quality tech posts with optional images
 - **Mention Responses**: Automatically responds to any mentions of your account
 - **Modular Architecture**: Clean, maintainable codebase organized by functionality
@@ -33,13 +33,13 @@ A perplexity-style Twitter bot for tech content that:
    ACCESS_TOKEN_SECRET=your_twitter_access_token_secret
    BEARER_TOKEN=your_twitter_bearer_token
 
-   # AI Provider Configuration (OpenRouter)
-   OPENROUTER_API_KEY=your_openrouter_api_key
-   CONTENT_MODEL=qwen/qwen3-coder:free  # Model for text generation
-   IMAGE_MODEL=bytedance-seed/seedream-4.5  # Model for image generation
+   # AI Provider Configuration (Hugging Face)
+   HF_TOKEN=your_huggingface_token
+   CONTENT_MODEL=Qwen/Qwen3-Coder-30B-A3B-Instruct  # Model for text generation
+   IMAGE_MODEL=stabilityai/stable-diffusion-xl-base-1.0  # Model for image generation
    ```
 4. Obtain Twitter API credentials from the [Twitter Developer Portal](https://developer.twitter.com/)
-5. Get an OpenRouter API key from [OpenRouter](https://openrouter.ai/)
+5. Get a Hugging Face Access Token from [Hugging Face Settings](https://huggingface.co/settings/tokens)
 
 ## Firebase Remote Config Setup
 
@@ -53,9 +53,9 @@ This project uses Firebase Remote Config to manage environment variables. Follow
    - `ACCESS_TOKEN` - Twitter Access Token
    - `ACCESS_TOKEN_SECRET` - Twitter Access Token Secret
    - `BEARER_TOKEN` - Twitter Bearer Token (optional)
-   - `OPENROUTER_API_KEY` - OpenRouter API Key
-   - `CONTENT_MODEL` - Text generation model (default: `qwen/qwen3-coder:free`)
-   - `IMAGE_MODEL` - Image generation model (default: `bytedance-seed/seedream-4.5`)
+   - `HF_TOKEN` - Hugging Face Token
+   - `CONTENT_MODEL` - Text generation model (default: `Qwen/Qwen3-Coder-30B-A3B-Instruct`)
+   - `IMAGE_MODEL` - Image generation model (default: `stabilityai/stable-diffusion-xl-base-1.0`)
 
 4. Set up Firebase Admin SDK authentication:
    - For local development:
@@ -77,8 +77,8 @@ src/
 ├── __init__.py          # Package initialization
 ├── constants.py         # Constants (keywords, defaults)
 ├── config.py            # Configuration management (Firebase, env vars)
-├── ai_service.py        # AI service for responses (OpenRouter)
-├── image_generator.py   # Image generation (Pollinations API, local fallback)
+├── ai_service.py        # AI service for responses (Hugging Face)
+├── image_generator.py   # Image generation (Hugging Face Inference API)
 ├── twitter_client.py    # Twitter API operations
 ├── bot.py               # Main bot class orchestrating all services
 └── main.py              # Entry point with task execution logic
@@ -117,7 +117,7 @@ The bot uses GitHub Actions for automated scheduling. The workflow file `.github
      - `ACCESS_TOKEN`
      - `ACCESS_TOKEN_SECRET`
      - `BEARER_TOKEN`
-     - `OPENROUTER_API_KEY`
+     - `HF_TOKEN`
      - `FIREBASE_SERVICE_ACCOUNT` (JSON content of your Firebase service account key)
 
 2. The workflow will automatically run on the scheduled times defined in the cron expression.
@@ -144,8 +144,8 @@ Customize the bot's tone and responses:
 
 ### Model Configuration
 - Change the models in Firebase Remote Config or `.env` file:
-  - Set `CONTENT_MODEL` for text generation (default: `qwen/qwen3-coder:free`)
-  - Set `IMAGE_MODEL` for image generation (default: `bytedance-seed/seedream-4.5`)
+  - Set `CONTENT_MODEL` for text generation (default: `Qwen/Qwen3-Coder-30B-A3B-Instruct`)
+  - Set `IMAGE_MODEL` for image generation (default: `stabilityai/stable-diffusion-xl-base-1.0`)
 
 ### Scheduling
 - Modify the GitHub Actions workflow schedule in `.github/workflows/bot.yml`

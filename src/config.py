@@ -59,9 +59,9 @@ def load_config():
         'ACCESS_TOKEN': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN']),
         'ACCESS_TOKEN_SECRET': get_config_value(evaluated_remote_config, 'ACCESS_TOKEN_SECRET', ULTIMATE_FALLBACK_DEFAULTS['ACCESS_TOKEN_SECRET']),
         'BEARER_TOKEN': get_config_value(evaluated_remote_config, 'BEARER_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['BEARER_TOKEN']),
-        'OPENROUTER_API_KEY': get_config_value(evaluated_remote_config, 'OPENROUTER_API_KEY', ULTIMATE_FALLBACK_DEFAULTS['OPENROUTER_API_KEY']),
         'IMAGE_MODEL': get_config_value(evaluated_remote_config, 'IMAGE_MODEL', ULTIMATE_FALLBACK_DEFAULTS['IMAGE_MODEL']),
         'CONTENT_MODEL': get_config_value(evaluated_remote_config, 'CONTENT_MODEL', ULTIMATE_FALLBACK_DEFAULTS['CONTENT_MODEL']),
+        'HF_TOKEN': get_config_value(evaluated_remote_config, 'HF_TOKEN', ULTIMATE_FALLBACK_DEFAULTS['HF_TOKEN']),
     }
     
     return config

@@ -9,13 +9,19 @@ from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
 class ImageGenerator:
-    """Image generation using OpenRouter (multimodal chat) with local fallback."""
+    """Image generation using Hugging Face Inference API with local fallback."""
     
-    def __init__(self, api_key: str = None, model_name: str = "bytedance-seed/seedream-4.5"):
-        """Initialize with API key."""
-        self.api_key = api_key
-        # Model for OpenRouter that supports image generation via chat completions
+    def __init__(self, hf_token: str = None, model_name: str = "stabilityai/stable-diffusion-xl-base-1.0"):
+        """Initialize with HF token."""
+        self.hf_token = hf_token
         self.model = model_name
+        self.client = None
+        if self.hf_token:
+            from huggingface_hub import InferenceClient
+            self.client = InferenceClient(
+                provider="hf-inference",
+                api_key=self.hf_token
+            )
     
     def create_tech_themed_image(self, topic: str, title: str) -> io.BytesIO:
         """Generate a tech-themed image locally using Pillow (fallback)."""
@@ -107,78 +113,33 @@ class ImageGenerator:
             return img_buffer
     
     def generate_image(self, prompt: str, fallback_generator=None) -> io.BytesIO:
-        """Generate image using OpenRouter multimodal chat completion with fallback."""
+        """Generate image using Hugging Face Inference API with fallback."""
         try:
-            print(f"Generating image using OpenRouter ({self.model}) with prompt: {prompt[:50]}...")
+            print(f"Generating image using HF Inference ({self.model}) with prompt: {prompt[:50]}...")
             
-            if not self.api_key:
-                raise ValueError("No OpenRouter API key provided")
+            if not self.client:
+                raise ValueError("No HF Token provided or client not initialized")
 
-            response = requests.post(
-                url="https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://github.com/tanujsinghkushwah/ask-genie-bot", 
-                },
-                data=json.dumps({
-                    "model": self.model,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    "modalities": ["image", "text"]
-                }),
-                timeout=60
+            # output is a PIL.Image object
+            image = self.client.text_to_image(
+                prompt,
+                model=self.model,
             )
             
-            response.raise_for_status()
-            result = response.json()
+            print(f"Image generated successfully.")
             
-            image_url = None
-            if result.get("choices"):
-                message = result["choices"][0]["message"]
-                if message.get("images"):
-                    for image in message["images"]:
-                        image_url = image["image_url"]["url"]
-                        # break after first image
-                        break
+            img_buffer = io.BytesIO()
+            image.save(img_buffer, format='JPEG', quality=95)
             
-            if not image_url:
-                raise ValueError("No image URL found in OpenRouter response")
-
-            print(f"Image found in response.")
-            
-            # Handle Base64 Data URL (data:image/png;base64,...)
-            if image_url.startswith("data:image"):
-                # Extract the base64 part
-                header, encoded = image_url.split(",", 1)
-                image_data = base64.b64decode(encoded)
-            else:
-                # Handle standard URL
-                print("Downloading image from URL...")
-                image_response = requests.get(image_url, timeout=30)
-                image_response.raise_for_status()
-                image_data = image_response.content
-
-            img_buffer = io.BytesIO(image_data)
-            
-            # Verify image
-            img = Image.open(img_buffer)
-            img.verify()
-            
-            img_buffer.seek(0)
-            img = Image.open(img_buffer)
-            img.save("generated_image.jpg")
+            # Save locally for verification
+            image.save("generated_image.jpg")
             print("Image saved to 'generated_image.jpg'")
             
             img_buffer.seek(0)
             return img_buffer
 
         except Exception as e:
-            print(f"Error generating image with OpenRouter: {e}")
+            print(f"Error generating image with HF Inference: {e}")
             print("Falling back to local image generation...")
             if fallback_generator:
                 return fallback_generator(prompt, prompt[:30])

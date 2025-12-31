@@ -12,10 +12,10 @@ ULTIMATE_FALLBACK_DEFAULTS = {
     'API_KEY_SECRET': 'YOUR_FALLBACK_API_KEY_SECRET_IN_CODE',
     'ACCESS_TOKEN': 'YOUR_FALLBACK_ACCESS_TOKEN_IN_CODE',
     'ACCESS_TOKEN_SECRET': 'YOUR_FALLBACK_ACCESS_TOKEN_SECRET_IN_CODE',
-    'OPENROUTER_API_KEY': '',
     'BEARER_TOKEN': '',
-    'IMAGE_MODEL': 'bytedance-seed/seedream-4.5',
-    'CONTENT_MODEL': 'qwen/qwen3-coder:free'
+    'IMAGE_MODEL': 'stabilityai/stable-diffusion-xl-base-1.0',
+    'CONTENT_MODEL': 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
+    'HF_TOKEN': ''
 }
 
 

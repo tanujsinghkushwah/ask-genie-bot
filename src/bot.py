@@ -21,17 +21,16 @@ class GenieTweetBot:
             bearer_token=config['BEARER_TOKEN']
         )
 
-        # Use OpenRouter with CONTENT_MODEL
+        # Use Hugging Face as primary provider for content
         self.ai_service = AIService(
-            provider='openrouter',
-            api_key=str(config.get('OPENROUTER_API_KEY', '')),
-            model_name=str(config.get('CONTENT_MODEL', 'qwen/qwen3-coder:free'))
+            token=str(config.get('HF_TOKEN', '')),
+            model_name=str(config.get('CONTENT_MODEL', 'Qwen/Qwen3-Coder-30B-A3B-Instruct'))
         )
         
 
         
         self.image_generator = ImageGenerator(
-            api_key=config.get('OPENROUTER_API_KEY'),
+            hf_token=config.get('HF_TOKEN'),
             model_name=config.get('IMAGE_MODEL')
         )
     
