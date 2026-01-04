@@ -15,9 +15,10 @@ class TwitterClient:
         # Initialize rate limiter
         self.rate_limiter = TwitterRateLimiter()
         
-        # Initialize Twitter client
+        # Initialize Twitter client (v2)
+        # We DO NOT pass bearer_token here to force Tweepy to use User Context (OAuth 1.0a)
+        # which is required for posting on most Free/Basic accounts.
         self.client = tweepy.Client(
-            bearer_token=bearer_token if bearer_token else None,  # Make bearer token optional
             consumer_key=api_key,
             consumer_secret=api_key_secret,
             access_token=access_token,
@@ -95,10 +96,16 @@ class TwitterClient:
         
         while retry_count < max_retries:
             try:
+                # Log the full tweet content for debugging
+                print(f"DEBUG: Full tweet text ({len(text)} chars):\n---\n{text}\n---")
+                print(f"DEBUG: Media IDs: {media_ids}")
+                
                 if media_ids:
+                    # Convert to strings if they are not already, as v2 API preferred
+                    media_ids_str = [str(m) for m in media_ids]
                     response = self.client.create_tweet(
                         text=text,
-                        media_ids=media_ids
+                        media_ids=media_ids_str
                     )
                 else:
                     response = self.client.create_tweet(text=text)
@@ -176,12 +183,22 @@ class TwitterClient:
                     return None
     
     def upload_media(self, image_buffer, filename: str = 'image.jpg'):
-        """Upload media to Twitter."""
+        """Upload media to Twitter from buffer."""
         try:
             media = self.api.media_upload(filename=filename, file=image_buffer)
-            return media.media_id
+            return media.media_id_string
         except Exception as e:
             print(f"Error uploading media: {e}")
+            return None
+    
+    def upload_media_from_file(self, filepath: str):
+        """Upload media to Twitter from file path."""
+        try:
+            media = self.api.media_upload(filename=filepath)
+            print(f"Media uploaded! ID: {media.media_id_string}")
+            return media.media_id_string
+        except Exception as e:
+            print(f"Error uploading media from file: {e}")
             return None
     
     def get_tweet(self, tweet_id: int):

@@ -46,8 +46,21 @@ class GenieTweetBot:
 
     def post_tweet(self, text: str, with_image: bool = False, image_topic: Optional[str] = None, image_title: Optional[str] = None):
         """Post a tweet with optional AI-generated image."""
+        print(f"DEBUG: Original generated text: {text}")
+        
         website_link = "\n\nLearn more at interviewgenie.net"
         tweet_text = text + website_link
+        
+        # Twitter counts all URLs as 23 characters regardless of length.
+        # To be safe and account for weighting/emojis, we'll aim for 260 total.
+        limit = 260
+        if len(tweet_text) > limit:
+            print(f"Warning: Tweet text length ({len(tweet_text)}) exceeds {limit}. Truncating...")
+            # Truncate 'text' so that text + website_link fits in limit
+            available_space = limit - len(website_link) - 3  # -3 for '...'
+            tweet_text = text[:available_space] + "..." + website_link
+        
+        print(f"DEBUG: Final tweet content to post ({len(tweet_text)} chars):\n{tweet_text}")
         
         if with_image and image_topic:
             # Generate image
@@ -68,8 +81,10 @@ class GenieTweetBot:
             
             if img_buffer:
                 print("Uploading image to Twitter...")
-                media_id = self.twitter_client.upload_media(img_buffer)
+                # Use file path for upload (more reliable than buffer)
+                media_id = self.twitter_client.upload_media_from_file("generated_image.jpg")
                 if media_id:
+                    print(f"DEBUG: Final tweet text to post: '{tweet_text[:50]}...'")
                     return self.twitter_client.post_tweet(tweet_text, media_ids=[media_id])
                 else:
                     print("Media upload failed, posting text-only tweet")
@@ -191,7 +206,8 @@ class GenieTweetBot:
         - Open with bold/contrarian hook on a universal dev pain (e.g., "Everyone chases X, but...")
         - Drop 1 unexpected insight from real SDE experience (keep <5 sentences, simple words)
         - End with reply bait: question like "What's your take?" or polarizing takeaway
-        - Under 240 chars, conversational like a human senior staff engineer
+        - STRICTLY UNDER 200 characters (total budget is 280, including links)
+        - Short, punchy sentences.
         - No hashtags, no AI mentions, no *emphasis*
         """
         
