@@ -132,9 +132,13 @@ class TwitterClient:
                 
                 if retry_count < max_retries:
                     print(f"Error posting tweet: {e}. Retrying in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
+                    if hasattr(e, 'response') and e.response is not None:
+                        print(f"DEBUG: API Error Detail: {e.response.text}")
                     time.sleep(retry_delay)
                 else:
                     print(f"Failed to post tweet after {max_retries} attempts: {e}")
+                    if hasattr(e, 'response') and e.response is not None:
+                        print(f"DEBUG: Final API Error Detail: {e.response.text}")
                     return None
     
     def reply_to_tweet(self, tweet_id: int, text: str, max_retries: int = 3, retry_delay: int = 10):
