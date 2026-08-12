@@ -16,26 +16,26 @@ _COUNTER_PATH = "social_gen/backlink_counter"
 
 # Pillar-to-URL map — real pages from interviewgenie.net sitemap
 PILLAR_TO_URL: dict[str, str] = {
-    "anti_grind_contrarian":       "https://interviewgenie.net/question-bank.html",
-    "behavioral_round_save":       "https://interviewgenie.net/tutorials.html",
-    "system_design_demystified":   "https://interviewgenie.net/question-bank/backend.html",
+    "anti_grind_contrarian":       "https://interviewgenie.net/question-bank",
+    "behavioral_round_save":       "https://interviewgenie.net/guides/behavioral-interview-answers-that-work",
+    "system_design_demystified":   "https://interviewgenie.net/guides/system-design-interview-in-one-week",
     "hiring_market_reality":       "https://interviewgenie.net/",
-    "interview_horror_recovery":   "https://interviewgenie.net/tutorials.html",
+    "interview_horror_recovery":   "https://interviewgenie.net/guides/behavioral-interview-answers-that-work",
     "salary_negotiation":          "https://interviewgenie.net/",
-    "interview_day_tactics":       "https://interviewgenie.net/tutorials.html",
+    "interview_day_tactics":       "https://interviewgenie.net/guides/software-engineering-interview-prep-guide",
     "tool_reveal":                 "https://interviewgenie.net/",
 }
 
 # Trend-keyword overrides — if the trend title matches, use a specialty page instead
 _TOPIC_KEYWORDS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\bfrontend\b|\breact\b|\bvue\b|\bnext\.?js\b", re.I),
-     "https://interviewgenie.net/question-bank/frontend.html"),
+     "https://interviewgenie.net/question-bank/frontend"),
     (re.compile(r"\bbackend\b|\bnode\b|\bspring\b|\bdjango\b|\bapi\b", re.I),
-     "https://interviewgenie.net/question-bank/backend.html"),
+     "https://interviewgenie.net/question-bank/backend"),
     (re.compile(r"\bdevops\b|\bkubernetes\b|\bdocker\b|\bci.?cd\b|\bterraform\b", re.I),
-     "https://interviewgenie.net/question-bank/devops.html"),
+     "https://interviewgenie.net/question-bank/devops"),
     (re.compile(r"\bmachine.?learning\b|\b\bml\b|\bai model\b|\bdeep.?learning\b|\bllm\b", re.I),
-     "https://interviewgenie.net/question-bank/machine-learning.html"),
+     "https://interviewgenie.net/question-bank/machine-learning"),
 ]
 
 # Posts-per-link bucket sizes per platform (deterministic ~rate control)

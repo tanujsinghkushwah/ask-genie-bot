@@ -86,7 +86,7 @@ class ContentPipeline:
         print(f"Waiting {self.delay_seconds}s to respect rate limits...")
         time.sleep(self.delay_seconds)
 
-    def _build_prompt(self, trend: TrendItem, persona: Optional[dict] = None, pillar: Optional[dict] = None) -> tuple[str, str]:
+    def _build_prompt(self, trend: TrendItem, persona: Optional[dict] = None, pillar: Optional[dict] = None) -> tuple[str, str, Optional[str], Optional[str]]:
         """Build the dual-platform prompt. Returns (prompt, pillar_name)."""
         if persona is None:
             persona = self._pick_persona_balanced()
@@ -136,11 +136,11 @@ RECENT OPENINGS YOU HAVE USED — your new opening must NOT echo or rephrase any
         li_link = self.backlink_manager.should_include_backlink("linkedin", pillar_name_for_backlink, trend.title)
 
         x_link_rule = (
-            f"- Include this link as the final line: {x_link}"
+            "- Lead into a link at the end, but DO NOT output the URL yourself."
             if x_link else "- No URLs in this post."
         )
         li_link_rule = (
-            f"- Include this link as the final line after the CTA: {li_link}"
+            "- Lead into a link at the end, but DO NOT output the URL yourself."
             if li_link else "- No URLs in this post."
         )
 
@@ -217,7 +217,7 @@ Ensure all quotes inside the text are properly escaped.
 }}
 ```"""
 
-        return prompt, pillar["name"]
+        return prompt, pillar["name"], x_link, li_link
 
     def _generate_multi_platform_content(self, trend: TrendItem) -> Optional[dict]:
         """Generate X, Instagram, and LinkedIn post content for a trending topic.
@@ -230,7 +230,7 @@ Ensure all quotes inside the text are properly escaped.
         pillar = pick_pillar()
 
         for attempt in range(3):
-            prompt, pillar_name = self._build_prompt(trend, persona=persona, pillar=pillar)
+            prompt, pillar_name, x_link, li_link = self._build_prompt(trend, persona=persona, pillar=pillar)
             result = self.ai_service.generate_multi_platform_content(prompt)
             if not result:
                 return None
@@ -263,10 +263,20 @@ Ensure all quotes inside the text are properly escaped.
             # Phase 3 — Jaccard dedup check against last 30 days
             similar_entry = self.post_history.is_too_similar(ig_post, threshold=0.7, days=30)
 
-            if (hook_echo or opening_echo or similar_entry) and attempt < 2:
+            # Post-process links since the LLM was instructed not to output them
+            if x_link:
+                x_post = f"{x_post.rstrip()}\n\n{x_link}"
+            if li_link and li_post:
+                li_post = f"{li_post.rstrip()}\n\n{li_link}"
+
+            x_len = len(x_post) if not x_link else len(x_post) - len(x_link) + 23
+            too_long = x_len > 280
+
+            if (hook_echo or opening_echo or similar_entry or too_long) and attempt < 2:
                 reason = (
                     "hook template echo" if hook_echo
                     else "opening echo" if opening_echo
+                    else "X post too long" if too_long
                     else f"near-duplicate of post from {similar_entry.get('ts', '?')}"
                 )
                 print(f"  [retry {attempt + 1}/2] {reason} — regenerating with fresh persona+pillar")
@@ -274,11 +284,12 @@ Ensure all quotes inside the text are properly escaped.
                 pillar = pick_pillar()
                 continue
 
-            # Hard-trim X post to 280 chars at a sentence boundary if over limit
-            if len(x_post) > 280:
-                trimmed = x_post[:277]
-                last_sentence = max(trimmed.rfind(". "), trimmed.rfind("? "), trimmed.rfind("! "))
-                x_post = (trimmed[:last_sentence + 1] if last_sentence > 100 else trimmed).rstrip() + "..."
+            if too_long:
+                core_len = 280 - (27 if x_link else 3)
+                core_text = x_post.replace(f"\n\n{x_link}", "") if x_link else x_post
+                x_post = core_text[:core_len].rsplit(' ', 1)[0].rstrip(" .?!") + "..."
+                if x_link:
+                    x_post += f"\n\n{x_link}"
 
             print(f"X post ({len(x_post)} chars): {x_post[:80]}...")
             print(f"Instagram post ({len(ig_post)} chars): {ig_post[:80]}...")
